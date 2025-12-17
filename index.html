@@ -7,6 +7,10 @@
     <title>Ecosistema Carbonero Paipa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script>
+      // Polyfill para process.env necesario en entornos de navegador puro
+      window.process = { env: { NODE_ENV: 'production' } };
+    </script>
   <script type="importmap">
 {
   "imports": {
@@ -22,5 +26,6 @@
 </head>
   <body class="bg-slate-950 text-slate-100 min-h-screen">
     <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

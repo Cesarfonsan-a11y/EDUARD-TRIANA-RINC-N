@@ -1,12 +1,12 @@
 
 import React, { useState, useCallback, useRef } from 'react';
-import { ACTORS, RELATIONS } from './constants';
-import { ActorNode, AnalysisResponse, VoteRecord } from './types';
-import NetworkGraph from './components/NetworkGraph';
-import AnalysisPanel from './components/AnalysisPanel';
-import VoteRegistry from './components/VoteRegistry';
-import ElectoralStats from './components/ElectoralStats';
-import { getEcosystemAnalysis, AnalysisMode } from './services/geminiService';
+import { ACTORS, RELATIONS } from './constants.ts';
+import { ActorNode, AnalysisResponse, VoteRecord } from './types.ts';
+import NetworkGraph from './components/NetworkGraph.tsx';
+import AnalysisPanel from './components/AnalysisPanel.tsx';
+import VoteRegistry from './components/VoteRegistry.tsx';
+import ElectoralStats from './components/ElectoralStats.tsx';
+import { getEcosystemAnalysis, AnalysisMode } from './services/geminiService.ts';
 
 const App: React.FC = () => {
   const [selectedActor, setSelectedActor] = useState<ActorNode | null>(null);
@@ -111,7 +111,6 @@ const App: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Dashboard Refinado: Solo datos reales confirmados */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {metrics.map((stat) => (
               <button 
