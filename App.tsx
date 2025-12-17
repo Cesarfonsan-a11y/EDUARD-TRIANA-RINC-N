@@ -81,26 +81,26 @@ const App: React.FC = () => {
   };
 
   const metrics = [
-    { id: 'voters', label: 'Identificados Triana', val: voteRecords.length.toLocaleString(), icon: 'fa-id-card-clip', color: 'text-emerald-500' },
-    { id: 'relations', label: 'Relaciones Activas', val: RELATIONS.length, icon: 'fa-diagram-project', color: 'text-blue-400' },
-    { id: 'sectors', label: 'Sectores Clave', val: ACTORS.length, icon: 'fa-industry', color: 'text-amber-500' },
+    { id: 'voters', label: 'Identificados Triana', val: voteRecords.length.toLocaleString(), icon: 'fa-id-card-clip', color: 'text-blue-400' },
+    { id: 'relations', label: 'Relaciones Activas', val: RELATIONS.length, icon: 'fa-diagram-project', color: 'text-sky-300' },
+    { id: 'sectors', label: 'Sectores Clave', val: ACTORS.length, icon: 'fa-industry', color: 'text-white' },
   ];
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 pb-20">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800 pb-6">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-blue-900 pb-6">
         <div>
-          <div className="text-amber-500 text-xs font-black uppercase tracking-[0.2em] mb-1">Campaña a la Cámara</div>
+          <div className="text-blue-400 text-xs font-black uppercase tracking-[0.2em] mb-1">Campaña a la Cámara - Partido Conservador</div>
           <h1 className="text-4xl font-black tracking-tighter text-white">
-            EDUARD <span className="text-amber-500">TRIANA RINCÓN</span>
+            EDUARD <span className="text-blue-500">TRIANA RINCÓN</span>
           </h1>
           <p className="text-slate-400 mt-2 max-w-2xl font-medium">
-            Control Territorial Paipa: Inteligencia predictiva y gestión de base electoral minera.
+            Control Territorial Paipa: Inteligencia predictiva y gestión de base electoral minera bajo principios de orden y desarrollo.
           </p>
         </div>
         <div className="flex gap-2 text-xs">
-          <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/80 rounded-xl border border-slate-700 text-emerald-400 font-bold shadow-lg shadow-emerald-500/5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 rounded-xl border border-blue-800 text-blue-100 font-bold shadow-lg shadow-blue-500/5">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
             SISTEMA DE INTELIGENCIA ACTIVO
           </div>
         </div>
@@ -116,7 +116,7 @@ const App: React.FC = () => {
               <button 
                 key={stat.id} 
                 onClick={() => handleMetricClick(stat.id, stat.label)}
-                className="bg-slate-900/40 p-5 rounded-xl border border-slate-800 flex flex-col items-center text-center group hover:border-amber-500/50 hover:bg-slate-900/60 transition-all active:scale-95 shadow-lg shadow-black/20"
+                className="bg-slate-900/40 p-5 rounded-xl border border-slate-800 flex flex-col items-center text-center group hover:border-blue-500/50 hover:bg-blue-950/20 transition-all active:scale-95 shadow-lg shadow-black/20"
               >
                 <div className={`${stat.color} mb-3 text-xl group-hover:scale-125 transition-transform duration-300`}>
                   <i className={`fa-solid ${stat.icon}`}></i>
@@ -124,7 +124,7 @@ const App: React.FC = () => {
                 <div className="text-3xl font-black text-white mb-1 tabular-nums animate-in fade-in slide-in-from-bottom-2 duration-500">
                   {stat.val}
                 </div>
-                <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest group-hover:text-slate-300 transition-colors">
+                <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest group-hover:text-blue-300 transition-colors">
                   {stat.label}
                 </div>
               </button>
@@ -135,8 +135,8 @@ const App: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Matriz de Influencia Económico-Política</span>
               <div className="flex items-center gap-4 text-[10px] font-bold">
-                <span className="flex items-center gap-1 text-amber-500">
-                  <span className="w-2 h-0.5 bg-amber-500"></span> FLUJO ECONÓMICO
+                <span className="flex items-center gap-1 text-blue-500">
+                  <span className="w-2 h-0.5 bg-blue-500"></span> FLUJO ECONÓMICO
                 </span>
                 <span className="flex items-center gap-1 text-red-500">
                   <span className="w-2 h-0.5 border-t border-dashed border-red-500"></span> VOTO / PODER
@@ -175,7 +175,7 @@ const App: React.FC = () => {
       </div>
 
       <footer className="mt-20 pt-8 border-t border-slate-900 text-slate-600 text-[10px] text-center max-w-3xl mx-auto space-y-2">
-        <p className="font-black tracking-[0.3em] text-slate-500 uppercase">War Room Paipa - Consolidación de Votos</p>
+        <p className="font-black tracking-[0.3em] text-blue-600 uppercase">War Room Paipa - Consolidación Conservadora</p>
         <p>REPRESENTANTE EDUARD TRIANA RINCÓN - CENTRO DE INTELIGENCIA ELECTORAL</p>
         <p>© 2024 Estrategia Territorial Basada en Datos</p>
       </footer>

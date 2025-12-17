@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { ActorNode, RelationLink } from '../types';
+import { ActorNode, RelationLink } from '../types.ts';
 
 interface Props {
   nodes: ActorNode[];
@@ -33,9 +33,9 @@ const NetworkGraph: React.FC<Props> = ({ nodes, links, onNodeClick }) => {
       .data(links)
       .enter().append('line')
       .attr('stroke', d => {
-        if (d.type === 'PRIMARY_FLOW') return '#fbbf24';
-        if (d.type === 'SECONDARY_FLOW') return '#94a3b8';
-        return '#ef4444';
+        if (d.type === 'PRIMARY_FLOW') return '#3b82f6'; // Azul Brillante
+        if (d.type === 'SECONDARY_FLOW') return '#94a3b8'; // Gris Slate
+        return '#ef4444'; // Rojo Influencia
       })
       .attr('stroke-dasharray', d => d.type === 'VOTING_INFLUENCE' ? '5,5' : 'none')
       .attr('stroke-width', d => d.type === 'PRIMARY_FLOW' ? 4 : 2)
@@ -47,12 +47,12 @@ const NetworkGraph: React.FC<Props> = ({ nodes, links, onNodeClick }) => {
       .enter().append('circle')
       .attr('r', d => (d.category === 'CORE' ? 25 : 18))
       .attr('fill', d => {
-        if (d.category === 'CORE') return '#1e293b';
-        if (d.category === 'SUPPLIER') return '#fbbf24';
-        if (d.category === 'CONSUMPTION') return '#3b82f6';
-        return '#ef4444';
+        if (d.category === 'CORE') return '#1e3a8a'; // Blue 900
+        if (d.category === 'SUPPLIER') return '#3b82f6'; // Blue 500
+        if (d.category === 'CONSUMPTION') return '#fff'; // White
+        return '#ef4444'; // Político
       })
-      .attr('stroke', '#fff')
+      .attr('stroke', '#334155')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
       .on('click', (event, d) => onNodeClick(d as ActorNode))
@@ -109,15 +109,15 @@ const NetworkGraph: React.FC<Props> = ({ nodes, links, onNodeClick }) => {
 
   return (
     <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 h-[450px]">
-      <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-        <i className="fa-solid fa-network-wired text-amber-400"></i>
-        Mapeo de Actores y Flujos
+      <h3 className="text-lg font-bold mb-2 flex items-center gap-2 text-white">
+        <i className="fa-solid fa-network-wired text-blue-400"></i>
+        Mapeo de Redes de Influencia
       </h3>
       <svg ref={svgRef} className="w-full h-full"></svg>
       <div className="flex gap-4 mt-2 text-xs text-slate-400 overflow-x-auto pb-2">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-slate-800 rounded-full border border-white"></span> Núcleo</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-400 rounded-full"></span> Proveedor</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded-full"></span> Consumo</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-900 rounded-full border border-white"></span> Núcleo</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded-full"></span> Proveedor</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-white rounded-full border border-slate-600"></span> Consumo</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded-full"></span> Político</span>
       </div>
     </div>
