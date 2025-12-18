@@ -10,7 +10,7 @@ import ElectoralView from './components/ElectoralView.tsx';
 import ThankYouModal from './components/ThankYouModal.tsx';
 import { syncWithCloud } from './services/syncService.ts';
 
-// Zonas simuladas de Paipa para la visualización territorial
+// Zonas simuladas de Paipa
 const MOCK_ZONES: ElectoralZone[] = [
   { id: 'z1', name: 'Barrio El Rosario', votePercentage: 65, workerDensity: 80 },
   { id: 'z2', name: 'Vereda Palermo', votePercentage: 45, workerDensity: 90 },
@@ -20,27 +20,49 @@ const MOCK_ZONES: ElectoralZone[] = [
 
 const App: React.FC = () => {
   const [selectedActor, setSelectedActor] = useState<ActorNode | null>(null);
-  const [voteRecords, setVoteRecords] = useState<VoteRecord[]>([]);
+  const [voteRecords, setVoteRecords] = useState<VoteRecord[]>(() => {
+    // Carga inicial desde localStorage para evitar perder datos al recargar
+    const saved = localStorage.getItem('base_102_local');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [viewMode, setViewMode] = useState<'network' | 'map'>('network');
   const [lastRegisteredName, setLastRegisteredName] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const registryRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
+  // Referencia para evitar cierres obsoletos en los intervalos de sincronización
+  const recordsRef = useRef<VoteRecord[]>(voteRecords);
+  
+  // Actualizar la referencia y localStorage cada vez que cambien los registros
+  useEffect(() => {
+    recordsRef.current = voteRecords;
+    localStorage.setItem('base_102_local', JSON.stringify(voteRecords));
+  }, [voteRecords]);
 
-  // EFECTO DE SINCRONIZACIÓN INICIAL Y PERIÓDICA
+  // EFECTO DE SINCRONIZACIÓN PERIÓDICA (Corregido)
   useEffect(() => {
     const performSync = async () => {
+      if (isSyncing) return;
       setIsSyncing(true);
-      const syncedData = await syncWithCloud(voteRecords);
-      setVoteRecords(syncedData);
-      setIsSyncing(false);
+      try {
+        const currentLocal = recordsRef.current;
+        const syncedData = await syncWithCloud(currentLocal);
+        
+        // Solo actualizamos si hay cambios reales para evitar re-renders infinitos
+        if (JSON.stringify(syncedData) !== JSON.stringify(currentLocal)) {
+          setVoteRecords(syncedData);
+        }
+      } catch (err) {
+        console.error("Fallo de sync en intervalo:", err);
+      } finally {
+        setIsSyncing(false);
+      }
     };
 
+    // Sincronización inicial
     performSync();
     
-    // Polling cada 30 segundos para ver si otros usuarios agregaron votos
-    const interval = setInterval(performSync, 30000);
+    // Polling cada 15 segundos para mantener a todos los usuarios al día
+    const interval = setInterval(performSync, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -55,24 +77,33 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
-    const updatedRecords = [newRecord, ...voteRecords];
-    setVoteRecords(updatedRecords);
+    // Actualización inmediata del estado para feedback visual
+    setVoteRecords(prev => [newRecord, ...prev]);
     setLastRegisteredName(record.voterName); 
 
-    // Sincronizar inmediatamente al agregar
+    // Forzar sincronización inmediata con los nuevos datos
     setIsSyncing(true);
-    await syncWithCloud(updatedRecords);
-    setIsSyncing(false);
+    try {
+      const currentFullList = [newRecord, ...recordsRef.current];
+      const synced = await syncWithCloud(currentFullList);
+      setVoteRecords(synced);
+    } catch (err) {
+      console.error("Error al sincronizar nuevo registro:", err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleDeleteVoteRecord = async (id: string) => {
-    const updatedRecords = voteRecords.filter(r => r.id !== id);
-    setVoteRecords(updatedRecords);
+    const updated = voteRecords.filter(r => r.id !== id);
+    setVoteRecords(updated);
     
-    // Sincronizar inmediatamente al borrar
     setIsSyncing(true);
-    await syncWithCloud(updatedRecords);
-    setIsSyncing(false);
+    try {
+      await syncWithCloud(updated);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleMetricClick = (type: string) => {
@@ -83,6 +114,9 @@ const App: React.FC = () => {
     }
     setSelectedActor(null);
   };
+
+  const registryRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
 
   const metrics = [
     { id: 'voters', label: 'Registros 102', val: voteRecords.length.toLocaleString(), icon: 'fa-id-card-clip', color: 'text-sky-500' },
@@ -101,13 +135,10 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* HEADER PREMIUM */}
+      {/* HEADER */}
       <header className="relative bg-white rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] flex flex-col md:flex-row h-auto md:h-[320px] border border-slate-100 group">
-        
-        {/* LADO IZQUIERDO: BRANDING */}
         <div className="md:w-[28%] relative bg-gradient-to-br from-[#facc15] to-[#eab308] flex items-center justify-center overflow-hidden min-h-[160px] md:min-h-0">
           <div className="absolute top-0 right-0 h-full w-full bg-white transform translate-x-1/2 -skew-x-[15deg] z-10 hidden md:block"></div>
-          
           <div className="relative z-30 text-center transform md:-rotate-2">
             <h2 className="text-3xl md:text-5xl font-black italic tracking-tighter drop-shadow-xl flex flex-col leading-none mb-2">
               <span className="text-blue-900">#POR TÍ</span>
@@ -117,48 +148,30 @@ const App: React.FC = () => {
                <div className="h-full bg-blue-900 w-1/2 rounded-full"></div>
             </div>
           </div>
-
           <div className="absolute bottom-0 w-full z-40 bg-[#0ea5e9] py-3 text-center overflow-hidden">
              <span className="relative text-white font-black text-[10px] md:text-xs tracking-[0.5em] uppercase italic">VOTA ASÍ A LA CÁMARA</span>
           </div>
         </div>
 
-        {/* LADO DERECHO: COMPOSICIÓN */}
         <div className="md:w-[72%] bg-white p-6 md:px-14 flex flex-col justify-center relative overflow-hidden pt-12 md:pt-6">
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                style={{ backgroundImage: 'radial-gradient(circle, #1e3a8a 1.2px, transparent 1.2px)', backgroundSize: '30px 30px' }}>
           </div>
-
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 h-full">
             <div className="flex flex-col items-center md:items-start flex-1 w-full md:w-auto">
               <div className="bg-[#1e3a8a] text-white px-8 md:px-10 py-1.5 font-black text-lg md:text-xl shadow-[0_10px_20px_rgba(30,58,138,0.2)] transform -skew-x-12 mb-4 md:mb-6 inline-block mt-2">
                 YO VOTO
               </div>
-              
               <div className="flex flex-col space-y-1 md:space-y-2 text-center md:text-left">
                 <span className="text-[#1e3a8a] font-black text-3xl md:text-5xl tracking-tighter uppercase md:ml-2 drop-shadow-sm">EDUAR</span>
                 <h1 className="text-[#1e3a8a] font-black text-5xl md:text-7xl lg:text-[8.5rem] tracking-tighter uppercase leading-[0.8] mb-2 md:mb-4">TRIANA</h1>
               </div>
-
-              <div className="hidden md:flex bg-slate-50 px-4 md:px-6 py-3 md:py-4 rounded-3xl border border-slate-100 items-center gap-4 md:gap-6 shadow-sm">
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest leading-none mb-1">PARTIDO</span>
-                  <span className="text-sm md:text-base font-black text-blue-900 uppercase leading-none tracking-tight">CENTRO DEMOCRÁTICO</span>
-                  <span className="text-[8px] font-bold text-red-500 uppercase italic mt-1 leading-none">MANO FIRME, CORAZÓN GRANDE</span>
-                </div>
-                <div className="h-10 md:h-12 w-[2px] bg-slate-200"></div>
-                <div className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-white border-2 border-[#1e3a8a] rounded-2xl shadow-inner transform rotate-3">
-                   <span className="text-2xl md:text-3xl font-black text-[#1e3a8a] italic">102</span>
-                </div>
-              </div>
             </div>
-
             <div className="flex flex-col items-center justify-center relative scale-90 md:scale-95 lg:scale-100 mt-2 md:mt-0 md:pr-4">
               <div className="relative">
                 <span className="absolute inset-0 text-[5.5rem] md:text-[9rem] lg:text-[11rem] font-black text-[#1e3a8a] leading-none italic translate-x-1 translate-y-1 md:translate-x-2 md:translate-y-2 opacity-80">102</span>
                 <span className="relative text-[5.5rem] md:text-[9rem] lg:text-[11rem] font-black text-[#facc15] leading-none italic">102</span>
               </div>
-              
               <div className="flex items-center gap-3 md:gap-4 -mt-3 md:-mt-6">
                 <div className="h-[2px] md:h-[3px] w-6 md:w-10 bg-[#0ea5e9]"></div>
                 <span className="text-[#0ea5e9] font-black text-xl md:text-4xl lg:text-5xl tracking-[0.1em] uppercase">CÁMARA</span>
@@ -168,11 +181,11 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Sync Indicator Tag */}
+        {/* Sync Indicator */}
         <div className="absolute top-4 right-6 hidden lg:block z-50">
            <div className={`px-4 py-1.5 rounded-full border flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest shadow-sm transition-colors ${isSyncing ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
              <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></span>
-             {isSyncing ? 'SINCRONIZANDO NUBE...' : 'WAR ROOM CONECTADO'}
+             {isSyncing ? 'SINCRONIZANDO...' : 'EQUIPO CONECTADO'}
            </div>
         </div>
       </header>
@@ -217,27 +230,12 @@ const App: React.FC = () => {
                   Mapa Paipa
                 </button>
               </div>
-              <div className="flex items-center gap-4 text-[10px] font-bold">
-                <span className="flex items-center gap-1 text-[#0ea5e9]">
-                  <span className="w-2 h-0.5 bg-[#0ea5e9]"></span> FLUJO ECONÓMICO
-                </span>
-                <span className="flex items-center gap-1 text-[#facc15]">
-                  <span className="w-2 h-0.5 border-t border-dashed border-[#facc15]"></span> LEALTAD 102
-                </span>
-              </div>
             </div>
             
             {viewMode === 'network' ? (
-              <NetworkGraph 
-                nodes={ACTORS} 
-                links={RELATIONS} 
-                onNodeClick={onNodeClick} 
-              />
+              <NetworkGraph nodes={ACTORS} links={RELATIONS} onNodeClick={onNodeClick} />
             ) : (
-              <ElectoralView 
-                zones={MOCK_ZONES} 
-                onZoneClick={(z) => console.log(z)} 
-              />
+              <ElectoralView zones={MOCK_ZONES} onZoneClick={(z) => console.log(z)} />
             )}
           </div>
 
@@ -253,36 +251,20 @@ const App: React.FC = () => {
 
         <aside className="lg:sticky lg:top-8 h-fit space-y-6">
           <AnalysisPanel selectedActor={selectedActor} />
-
-          <div className="bg-[#1e3a8a] p-6 rounded-2xl border border-blue-700 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-sky-400 uppercase tracking-widest">Base de Datos Compartida</h4>
-              <span className="bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">SINCRONIZADO</span>
-            </div>
+          <div className="bg-[#1e3a8a] p-6 rounded-2xl border border-blue-700 shadow-xl space-y-4 text-center">
+            <h4 className="text-xs font-black text-sky-400 uppercase tracking-widest">Estado Multi-usuario</h4>
             <p className="text-xs text-blue-100/70 leading-relaxed italic">
-              "Esta herramienta ahora conecta a todo el equipo. Los registros que hagas aquí se verán reflejados en todos los dispositivos conectados al War Room."
+              Toda tu información está protegida localmente y se comparte con el equipo automáticamente.
             </p>
-            <div className="pt-4 border-t border-blue-800 flex items-center justify-center">
-               <div className="bg-white p-5 rounded-xl flex items-center gap-4 border border-slate-200 shadow-lg">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-blue-900 uppercase opacity-40 leading-none mb-1">ID War Room</span>
-                    <span className="text-sm font-black text-blue-900 uppercase tracking-tight">PAIPA-102</span>
-                    <span className="text-[9px] font-black text-sky-500 uppercase tracking-widest">Estado: Multi-usuario</span>
-                  </div>
-                  <div className="w-12 h-12 bg-[#facc15] rounded flex items-center justify-center text-2xl font-black text-blue-900 italic shadow-md">
-                    102
-                  </div>
-               </div>
+            <div className="bg-white/10 p-4 rounded-xl border border-white/10 mt-2">
+               <span className="text-[10px] font-bold text-white uppercase block mb-1">Último Voto Registrado</span>
+               <span className="text-sm font-black text-amber-400 uppercase tracking-tight">
+                 {voteRecords[0]?.voterName || 'Buscando datos...'}
+               </span>
             </div>
           </div>
         </aside>
       </div>
-
-      <footer className="mt-20 pt-8 border-t border-slate-900 text-slate-600 text-[10px] text-center max-w-3xl mx-auto space-y-2">
-        <p className="font-black tracking-[0.3em] text-blue-600 uppercase">War Room Paipa - Centro de Comando 102</p>
-        <p>CAMPAÑA EDUAR TRIANA - CÁMARA DE REPRESENTANTES</p>
-        <p>© 2024 Visualización Territorio Ganador</p>
-      </footer>
     </div>
   );
 };
