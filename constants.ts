@@ -9,7 +9,7 @@ export const ACTORS: ActorNode[] = [
   { id: 'empleados', name: 'Empleados y Familias', category: 'CONSUMPTION', description: 'El puente clave entre economía y votos.', baseCount: 1500 },
   { id: 'supermercados', name: 'Comercio Local', category: 'CONSUMPTION', description: 'Supermercados, carnicerías y tiendas.', baseCount: 300 },
   { id: 'gasolineras', name: 'Estaciones de Servicio', category: 'CONSUMPTION', description: 'Combustible para operación y movilidad.', baseCount: 60 },
-  { id: 'rep_camara', name: 'Eduard Triana Rincón', category: 'POLITICAL', description: 'Representante a la Cámara por Boyacá.', baseCount: 1 },
+  { id: 'rep_camara', name: 'Eduar Triana - 102', category: 'POLITICAL', description: 'Candidato a la Cámara por Boyacá. Centro Democrático.', baseCount: 1 },
   { id: 'alcaldia', name: 'Alcaldía Municipal', category: 'POLITICAL', description: 'Poder ejecutivo local.', baseCount: 150 },
   { id: 'concejales', name: 'Concejales', category: 'POLITICAL', description: 'Influencia normativa local.', baseCount: 13 },
 ];
