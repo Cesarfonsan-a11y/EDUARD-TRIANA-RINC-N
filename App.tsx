@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { ACTORS, RELATIONS } from './constants.ts';
 import { ActorNode, VoteRecord, ElectoralZone } from './types.ts';
 import NetworkGraph from './components/NetworkGraph.tsx';
@@ -8,6 +8,7 @@ import VoteRegistry from './components/VoteRegistry.tsx';
 import ElectoralStats from './components/ElectoralStats.tsx';
 import ElectoralView from './components/ElectoralView.tsx';
 import ThankYouModal from './components/ThankYouModal.tsx';
+import { syncWithCloud } from './services/syncService.ts';
 
 // Zonas simuladas de Paipa para la visualización territorial
 const MOCK_ZONES: ElectoralZone[] = [
@@ -22,27 +23,56 @@ const App: React.FC = () => {
   const [voteRecords, setVoteRecords] = useState<VoteRecord[]>([]);
   const [viewMode, setViewMode] = useState<'network' | 'map'>('network');
   const [lastRegisteredName, setLastRegisteredName] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const registryRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // EFECTO DE SINCRONIZACIÓN INICIAL Y PERIÓDICA
+  useEffect(() => {
+    const performSync = async () => {
+      setIsSyncing(true);
+      const syncedData = await syncWithCloud(voteRecords);
+      setVoteRecords(syncedData);
+      setIsSyncing(false);
+    };
+
+    performSync();
+    
+    // Polling cada 30 segundos para ver si otros usuarios agregaron votos
+    const interval = setInterval(performSync, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const onNodeClick = useCallback((node: ActorNode) => {
     setSelectedActor(node);
   }, []);
 
-  const handleAddVoteRecord = (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
+  const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
     const newRecord: VoteRecord = {
       ...record,
       id: crypto.randomUUID(),
       timestamp: Date.now()
     };
     
-    setVoteRecords(prev => [newRecord, ...prev]);
+    const updatedRecords = [newRecord, ...voteRecords];
+    setVoteRecords(updatedRecords);
     setLastRegisteredName(record.voterName); 
+
+    // Sincronizar inmediatamente al agregar
+    setIsSyncing(true);
+    await syncWithCloud(updatedRecords);
+    setIsSyncing(false);
   };
 
-  const handleDeleteVoteRecord = (id: string) => {
-    setVoteRecords(prev => prev.filter(r => r.id !== id));
+  const handleDeleteVoteRecord = async (id: string) => {
+    const updatedRecords = voteRecords.filter(r => r.id !== id);
+    setVoteRecords(updatedRecords);
+    
+    // Sincronizar inmediatamente al borrar
+    setIsSyncing(true);
+    await syncWithCloud(updatedRecords);
+    setIsSyncing(false);
   };
 
   const handleMetricClick = (type: string) => {
@@ -71,12 +101,11 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* HEADER PREMIUM - SIN FOTO, IMPACTO TIPOGRÁFICO PURO */}
+      {/* HEADER PREMIUM */}
       <header className="relative bg-white rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] flex flex-col md:flex-row h-auto md:h-[320px] border border-slate-100 group">
         
-        {/* LADO IZQUIERDO: BRANDING GRÁFICO (SIN IMAGEN) */}
+        {/* LADO IZQUIERDO: BRANDING */}
         <div className="md:w-[28%] relative bg-gradient-to-br from-[#facc15] to-[#eab308] flex items-center justify-center overflow-hidden min-h-[160px] md:min-h-0">
-          {/* Corte diagonal estilizado */}
           <div className="absolute top-0 right-0 h-full w-full bg-white transform translate-x-1/2 -skew-x-[15deg] z-10 hidden md:block"></div>
           
           <div className="relative z-30 text-center transform md:-rotate-2">
@@ -89,23 +118,19 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Banner Acción Inferior */}
           <div className="absolute bottom-0 w-full z-40 bg-[#0ea5e9] py-3 text-center overflow-hidden">
              <span className="relative text-white font-black text-[10px] md:text-xs tracking-[0.5em] uppercase italic">VOTA ASÍ A LA CÁMARA</span>
           </div>
         </div>
 
-        {/* LADO DERECHO: COMPOSICIÓN ESTRATÉGICA */}
+        {/* LADO DERECHO: COMPOSICIÓN */}
         <div className="md:w-[72%] bg-white p-6 md:px-14 flex flex-col justify-center relative overflow-hidden pt-12 md:pt-6">
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                style={{ backgroundImage: 'radial-gradient(circle, #1e3a8a 1.2px, transparent 1.2px)', backgroundSize: '30px 30px' }}>
           </div>
 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 h-full">
-            
-            {/* BLOQUE NOMBRE */}
             <div className="flex flex-col items-center md:items-start flex-1 w-full md:w-auto">
-              {/* Etiqueta YO VOTO con margen superior extra para evitar recorte */}
               <div className="bg-[#1e3a8a] text-white px-8 md:px-10 py-1.5 font-black text-lg md:text-xl shadow-[0_10px_20px_rgba(30,58,138,0.2)] transform -skew-x-12 mb-4 md:mb-6 inline-block mt-2">
                 YO VOTO
               </div>
@@ -115,7 +140,6 @@ const App: React.FC = () => {
                 <h1 className="text-[#1e3a8a] font-black text-5xl md:text-7xl lg:text-[8.5rem] tracking-tighter uppercase leading-[0.8] mb-2 md:mb-4">TRIANA</h1>
               </div>
 
-              {/* PARTIDO LOGO COMPACTO */}
               <div className="hidden md:flex bg-slate-50 px-4 md:px-6 py-3 md:py-4 rounded-3xl border border-slate-100 items-center gap-4 md:gap-6 shadow-sm">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest leading-none mb-1">PARTIDO</span>
@@ -129,7 +153,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* BLOQUE NÚMERO 102 CENTRAL - Redimensionado para mayor seguridad de margen */}
             <div className="flex flex-col items-center justify-center relative scale-90 md:scale-95 lg:scale-100 mt-2 md:mt-0 md:pr-4">
               <div className="relative">
                 <span className="absolute inset-0 text-[5.5rem] md:text-[9rem] lg:text-[11rem] font-black text-[#1e3a8a] leading-none italic translate-x-1 translate-y-1 md:translate-x-2 md:translate-y-2 opacity-80">102</span>
@@ -142,15 +165,14 @@ const App: React.FC = () => {
                 <div className="h-[2px] md:h-[3px] w-6 md:w-10 bg-[#0ea5e9]"></div>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Victory Tag - Reposicionado para evitar conflicto con el 2 */}
+        {/* Sync Indicator Tag */}
         <div className="absolute top-4 right-6 hidden lg:block z-50">
-           <div className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full border border-emerald-100 flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest shadow-sm">
-             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-             CENTRO DE MANDO ACTIVO
+           <div className={`px-4 py-1.5 rounded-full border flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest shadow-sm transition-colors ${isSyncing ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+             <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></span>
+             {isSyncing ? 'SINCRONIZANDO NUBE...' : 'WAR ROOM CONECTADO'}
            </div>
         </div>
       </header>
@@ -234,18 +256,18 @@ const App: React.FC = () => {
 
           <div className="bg-[#1e3a8a] p-6 rounded-2xl border border-blue-700 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-size-xs font-black text-sky-400 uppercase tracking-widest">Estado Operativo</h4>
-              <span className="bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">ACTIVO</span>
+              <h4 className="text-xs font-black text-sky-400 uppercase tracking-widest">Base de Datos Compartida</h4>
+              <span className="bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">SINCRONIZADO</span>
             </div>
             <p className="text-xs text-blue-100/70 leading-relaxed italic">
-              "Control de base electoral 102 en sectores de minería y comercio para asegurar la victoria legislativa de Eduar Triana."
+              "Esta herramienta ahora conecta a todo el equipo. Los registros que hagas aquí se verán reflejados en todos los dispositivos conectados al War Room."
             </p>
             <div className="pt-4 border-t border-blue-800 flex items-center justify-center">
                <div className="bg-white p-5 rounded-xl flex items-center gap-4 border border-slate-200 shadow-lg">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-blue-900 uppercase opacity-40 leading-none mb-1">Candidato</span>
-                    <span className="text-sm font-black text-blue-900 uppercase tracking-tight">Eduar Triana</span>
-                    <span className="text-[9px] font-black text-sky-500 uppercase tracking-widest">Boyacá 102</span>
+                    <span className="text-[10px] font-black text-blue-900 uppercase opacity-40 leading-none mb-1">ID War Room</span>
+                    <span className="text-sm font-black text-blue-900 uppercase tracking-tight">PAIPA-102</span>
+                    <span className="text-[9px] font-black text-sky-500 uppercase tracking-widest">Estado: Multi-usuario</span>
                   </div>
                   <div className="w-12 h-12 bg-[#facc15] rounded flex items-center justify-center text-2xl font-black text-blue-900 italic shadow-md">
                     102
