@@ -75,17 +75,17 @@ const App: React.FC = () => {
       <header className="relative bg-white rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] flex flex-col md:flex-row h-auto md:h-[320px] border border-slate-100 group">
         
         {/* LADO IZQUIERDO: BRANDING GRÁFICO (SIN IMAGEN) */}
-        <div className="md:w-[28%] relative bg-gradient-to-br from-[#facc15] to-[#eab308] flex items-center justify-center overflow-hidden">
+        <div className="md:w-[28%] relative bg-gradient-to-br from-[#facc15] to-[#eab308] flex items-center justify-center overflow-hidden min-h-[160px] md:min-h-0">
           {/* Corte diagonal estilizado */}
-          <div className="absolute top-0 right-0 h-full w-full bg-white transform translate-x-1/2 -skew-x-[15deg] z-10"></div>
+          <div className="absolute top-0 right-0 h-full w-full bg-white transform translate-x-1/2 -skew-x-[15deg] z-10 hidden md:block"></div>
           
-          <div className="relative z-30 text-center transform -rotate-2">
+          <div className="relative z-30 text-center transform md:-rotate-2">
             <h2 className="text-3xl md:text-5xl font-black italic tracking-tighter drop-shadow-xl flex flex-col leading-none mb-2">
               <span className="text-blue-900">#POR TÍ</span>
               <span className="text-[#0ea5e9]">BOYACÁ</span>
             </h2>
-            <div className="h-1.5 w-full bg-blue-900/20 mt-4 rounded-full overflow-hidden">
-               <div className="h-full bg-blue-900 w-1/2"></div>
+            <div className="h-1.5 w-full bg-blue-900/20 mt-4 rounded-full overflow-hidden px-10">
+               <div className="h-full bg-blue-900 w-1/2 rounded-full"></div>
             </div>
           </div>
 
@@ -96,58 +96,58 @@ const App: React.FC = () => {
         </div>
 
         {/* LADO DERECHO: COMPOSICIÓN ESTRATÉGICA */}
-        <div className="md:w-[72%] bg-white p-8 md:px-14 flex flex-col justify-center relative">
+        <div className="md:w-[72%] bg-white p-6 md:px-14 flex flex-col justify-center relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                style={{ backgroundImage: 'radial-gradient(circle, #1e3a8a 1.2px, transparent 1.2px)', backgroundSize: '30px 30px' }}>
           </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 h-full">
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 h-full">
             
             {/* BLOQUE NOMBRE */}
-            <div className="flex flex-col items-center md:items-start flex-1">
-              <div className="bg-[#1e3a8a] text-white px-10 py-1.5 font-black text-xl shadow-[0_10px_20px_rgba(30,58,138,0.2)] transform -skew-x-12 mb-6 inline-block">
+            <div className="flex flex-col items-center md:items-start flex-1 w-full md:w-auto">
+              <div className="bg-[#1e3a8a] text-white px-8 md:px-10 py-1.5 font-black text-lg md:text-xl shadow-[0_10px_20px_rgba(30,58,138,0.2)] transform -skew-x-12 mb-4 md:mb-6 inline-block">
                 YO VOTO
               </div>
               
-              <div className="flex flex-col space-y-1 md:space-y-2">
-                <span className="text-[#1e3a8a] font-black text-4xl md:text-5xl tracking-tighter uppercase ml-2 drop-shadow-sm">EDUAR</span>
-                <h1 className="text-[#1e3a8a] font-black text-6xl md:text-[9.5rem] tracking-tighter uppercase leading-[0.8] mb-4">TRIANA</h1>
+              <div className="flex flex-col space-y-1 md:space-y-2 text-center md:text-left">
+                <span className="text-[#1e3a8a] font-black text-3xl md:text-5xl tracking-tighter uppercase md:ml-2 drop-shadow-sm">EDUAR</span>
+                <h1 className="text-[#1e3a8a] font-black text-5xl md:text-8xl lg:text-[9rem] tracking-tighter uppercase leading-[0.8] mb-2 md:mb-4">TRIANA</h1>
               </div>
 
               {/* PARTIDO LOGO COMPACTO */}
-              <div className="hidden md:flex bg-slate-50 px-6 py-4 rounded-3xl border border-slate-100 items-center gap-6 shadow-sm">
+              <div className="hidden md:flex bg-slate-50 px-4 md:px-6 py-3 md:py-4 rounded-3xl border border-slate-100 items-center gap-4 md:gap-6 shadow-sm">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest leading-none mb-1">PARTIDO</span>
-                  <span className="text-base font-black text-blue-900 uppercase leading-none tracking-tight">CENTRO DEMOCRÁTICO</span>
+                  <span className="text-sm md:text-base font-black text-blue-900 uppercase leading-none tracking-tight">CENTRO DEMOCRÁTICO</span>
                   <span className="text-[8px] font-bold text-red-500 uppercase italic mt-1 leading-none">MANO FIRME, CORAZÓN GRANDE</span>
                 </div>
-                <div className="h-12 w-[2px] bg-slate-200"></div>
-                <div className="flex items-center justify-center w-14 h-14 bg-white border-2 border-[#1e3a8a] rounded-2xl shadow-inner transform rotate-3">
-                   <span className="text-3xl font-black text-[#1e3a8a] italic">102</span>
+                <div className="h-10 md:h-12 w-[2px] bg-slate-200"></div>
+                <div className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-white border-2 border-[#1e3a8a] rounded-2xl shadow-inner transform rotate-3">
+                   <span className="text-2xl md:text-3xl font-black text-[#1e3a8a] italic">102</span>
                 </div>
               </div>
             </div>
 
-            {/* BLOQUE NÚMERO 102 CENTRAL */}
-            <div className="flex flex-col items-center justify-center relative scale-90 md:scale-100 mt-4 md:mt-0">
+            {/* BLOQUE NÚMERO 102 CENTRAL - Ajustado para no salirse */}
+            <div className="flex flex-col items-center justify-center relative scale-95 md:scale-100 mt-2 md:mt-0 pr-4 md:pr-0">
               <div className="relative">
-                <span className="absolute inset-0 text-[7rem] md:text-[13rem] font-black text-[#1e3a8a] leading-none italic translate-x-2 translate-y-2">102</span>
-                <span className="relative text-[7rem] md:text-[13rem] font-black text-[#facc15] leading-none italic">102</span>
+                <span className="absolute inset-0 text-[5.5rem] md:text-[10rem] lg:text-[12rem] font-black text-[#1e3a8a] leading-none italic translate-x-1 translate-y-1 md:translate-x-2 md:translate-y-2 opacity-80">102</span>
+                <span className="relative text-[5.5rem] md:text-[10rem] lg:text-[12rem] font-black text-[#facc15] leading-none italic">102</span>
               </div>
               
-              <div className="flex items-center gap-4 -mt-4 md:-mt-8">
-                <div className="h-[2px] md:h-[3px] w-8 md:w-10 bg-[#0ea5e9]"></div>
-                <span className="text-[#0ea5e9] font-black text-2xl md:text-6xl tracking-[0.1em] uppercase">CÁMARA</span>
-                <div className="h-[2px] md:h-[3px] w-8 md:w-10 bg-[#0ea5e9]"></div>
+              <div className="flex items-center gap-3 md:gap-4 -mt-3 md:-mt-6">
+                <div className="h-[2px] md:h-[3px] w-6 md:w-10 bg-[#0ea5e9]"></div>
+                <span className="text-[#0ea5e9] font-black text-xl md:text-5xl lg:text-6xl tracking-[0.1em] uppercase">CÁMARA</span>
+                <div className="h-[2px] md:h-[3px] w-6 md:w-10 bg-[#0ea5e9]"></div>
               </div>
             </div>
 
           </div>
         </div>
 
-        {/* Victory Tag */}
-        <div className="absolute top-6 right-10 hidden lg:block">
-           <div className="bg-emerald-50 text-emerald-600 px-5 py-2 rounded-full border border-emerald-100 flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-sm">
+        {/* Victory Tag - Reposicionado para evitar conflicto con el 2 */}
+        <div className="absolute top-4 right-6 hidden lg:block z-50">
+           <div className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full border border-emerald-100 flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest shadow-sm">
              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
              CENTRO DE MANDO ACTIVO
            </div>
