@@ -109,9 +109,9 @@ const App: React.FC = () => {
                 YO VOTO
               </div>
               
-              <div className="flex flex-col -space-y-1 md:-space-y-2">
+              <div className="flex flex-col space-y-1 md:space-y-2">
                 <span className="text-[#1e3a8a] font-black text-4xl md:text-5xl tracking-tighter uppercase ml-2 drop-shadow-sm">EDUAR</span>
-                <h1 className="text-[#1e3a8a] font-black text-7xl md:text-[9.5rem] tracking-tighter uppercase leading-[0.8] mb-4">TRIANA</h1>
+                <h1 className="text-[#1e3a8a] font-black text-6xl md:text-[9.5rem] tracking-tighter uppercase leading-[0.8] mb-4">TRIANA</h1>
               </div>
 
               {/* PARTIDO LOGO COMPACTO */}
@@ -129,16 +129,16 @@ const App: React.FC = () => {
             </div>
 
             {/* BLOQUE NÚMERO 102 CENTRAL */}
-            <div className="flex flex-col items-center justify-center relative scale-90 md:scale-100">
+            <div className="flex flex-col items-center justify-center relative scale-90 md:scale-100 mt-4 md:mt-0">
               <div className="relative">
-                <span className="absolute inset-0 text-[11rem] md:text-[13rem] font-black text-[#1e3a8a] leading-none italic translate-x-2 translate-y-2">102</span>
-                <span className="relative text-[11rem] md:text-[13rem] font-black text-[#facc15] leading-none italic">102</span>
+                <span className="absolute inset-0 text-[7rem] md:text-[13rem] font-black text-[#1e3a8a] leading-none italic translate-x-2 translate-y-2">102</span>
+                <span className="relative text-[7rem] md:text-[13rem] font-black text-[#facc15] leading-none italic">102</span>
               </div>
               
-              <div className="flex items-center gap-4 -mt-8">
-                <div className="h-[3px] w-10 bg-[#0ea5e9]"></div>
-                <span className="text-[#0ea5e9] font-black text-4xl md:text-6xl tracking-[0.1em] uppercase">CÁMARA</span>
-                <div className="h-[3px] w-10 bg-[#0ea5e9]"></div>
+              <div className="flex items-center gap-4 -mt-4 md:-mt-8">
+                <div className="h-[2px] md:h-[3px] w-8 md:w-10 bg-[#0ea5e9]"></div>
+                <span className="text-[#0ea5e9] font-black text-2xl md:text-6xl tracking-[0.1em] uppercase">CÁMARA</span>
+                <div className="h-[2px] md:h-[3px] w-8 md:w-10 bg-[#0ea5e9]"></div>
               </div>
             </div>
 

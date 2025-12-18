@@ -77,7 +77,7 @@ const ThankYouModal: React.FC<Props> = ({ voterName, voterCount, onClose }) => {
           
           <div className="p-6 md:p-8 text-center space-y-6 md:space-y-8">
             {/* Mensaje de Impacto */}
-            <div className="bg-[#1e3a8a] p-3 md:p-4 rounded-2xl shadow-lg border-2 border-[#facc15] transform -rotate-1">
+            <div className="bg-[#1e3a8a] p-3 md:p-4 rounded-2xl shadow-lg border-2 border-[#facc15] transform -rotate-1 mx-4">
                <div className="text-white font-black text-3xl md:text-4xl leading-tight tracking-tighter italic">
                  ¡YA SOMOS <span className="text-[#facc15] text-4xl md:text-5xl">{voterCount}</span>!
                </div>
@@ -86,14 +86,14 @@ const ThankYouModal: React.FC<Props> = ({ voterName, voterCount, onClose }) => {
                </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 px-2">
               <div className="flex items-center justify-center gap-2">
                 <span className="h-[2px] w-6 md:w-8 bg-[#facc15]"></span>
                 <p className="text-slate-400 font-black uppercase text-[9px] md:text-xs tracking-widest">UN MENSAJE DE EDUAR PARA TI</p>
                 <span className="h-[2px] w-6 md:w-8 bg-[#facc15]"></span>
               </div>
               
-              <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border-2 border-slate-100 shadow-inner">
+              <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border-2 border-slate-100 shadow-inner mx-2">
                 <p className="text-2xl md:text-3xl font-black text-blue-900 leading-tight">
                   "¡Hola, <span className="text-sky-500">{voterName.toUpperCase().split(' ')[0]}</span>! <br className="hidden md:block" /> 
                   ¡Qué alegría que ya estés en el equipo!"
@@ -104,13 +104,13 @@ const ThankYouModal: React.FC<Props> = ({ voterName, voterCount, onClose }) => {
               </div>
             </div>
             
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-3 md:gap-4 bg-[#1e3a8a] py-2.5 md:py-3 px-5 md:px-6 rounded-xl shadow-lg">
-                 <div className="text-white font-black italic text-3xl md:text-4xl">102</div>
-                 <div className="h-8 md:h-10 w-[2px] bg-white/20"></div>
-                 <div className="text-left">
+            <div className="flex flex-col items-center gap-4 px-4">
+              <div className="flex items-center gap-3 md:gap-4 bg-[#1e3a8a] py-2.5 md:py-3 px-5 md:px-6 rounded-xl shadow-lg w-fit mx-auto overflow-hidden">
+                 <div className="text-white font-black italic text-3xl md:text-4xl flex-shrink-0">102</div>
+                 <div className="h-8 md:h-10 w-[2px] bg-white/20 flex-shrink-0"></div>
+                 <div className="text-left flex-shrink">
                    <div className="text-[8px] md:text-[10px] font-black text-white/70 uppercase tracking-widest leading-none">Tu Amigo</div>
-                   <div className="text-xs md:text-sm font-black text-[#facc15] uppercase tracking-tighter">Eduar Triana</div>
+                   <div className="text-xs md:text-sm font-black text-[#facc15] uppercase tracking-tighter truncate">Eduar Triana</div>
                  </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ const ThankYouModal: React.FC<Props> = ({ voterName, voterCount, onClose }) => {
           </div>
 
           {/* Botones de Acción (no se exportan en la imagen) */}
-          <div className="p-6 md:p-8 pt-0 space-y-3 md:space-y-4 no-export mt-4">
+          <div className="p-6 md:p-8 pt-0 space-y-3 md:space-y-4 no-export mt-4 px-8">
             <button 
               onClick={handleDownload}
               disabled={isDownloading}
