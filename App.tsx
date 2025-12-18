@@ -96,7 +96,7 @@ const App: React.FC = () => {
         </div>
 
         {/* LADO DERECHO: COMPOSICIÓN ESTRATÉGICA */}
-        <div className="md:w-[72%] bg-white p-6 md:px-14 flex flex-col justify-center relative overflow-hidden">
+        <div className="md:w-[72%] bg-white p-6 md:px-14 flex flex-col justify-center relative overflow-hidden pt-12 md:pt-6">
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                style={{ backgroundImage: 'radial-gradient(circle, #1e3a8a 1.2px, transparent 1.2px)', backgroundSize: '30px 30px' }}>
           </div>
@@ -105,13 +105,14 @@ const App: React.FC = () => {
             
             {/* BLOQUE NOMBRE */}
             <div className="flex flex-col items-center md:items-start flex-1 w-full md:w-auto">
-              <div className="bg-[#1e3a8a] text-white px-8 md:px-10 py-1.5 font-black text-lg md:text-xl shadow-[0_10px_20px_rgba(30,58,138,0.2)] transform -skew-x-12 mb-4 md:mb-6 inline-block">
+              {/* Etiqueta YO VOTO con margen superior extra para evitar recorte */}
+              <div className="bg-[#1e3a8a] text-white px-8 md:px-10 py-1.5 font-black text-lg md:text-xl shadow-[0_10px_20px_rgba(30,58,138,0.2)] transform -skew-x-12 mb-4 md:mb-6 inline-block mt-2">
                 YO VOTO
               </div>
               
               <div className="flex flex-col space-y-1 md:space-y-2 text-center md:text-left">
                 <span className="text-[#1e3a8a] font-black text-3xl md:text-5xl tracking-tighter uppercase md:ml-2 drop-shadow-sm">EDUAR</span>
-                <h1 className="text-[#1e3a8a] font-black text-5xl md:text-8xl lg:text-[9rem] tracking-tighter uppercase leading-[0.8] mb-2 md:mb-4">TRIANA</h1>
+                <h1 className="text-[#1e3a8a] font-black text-5xl md:text-7xl lg:text-[8.5rem] tracking-tighter uppercase leading-[0.8] mb-2 md:mb-4">TRIANA</h1>
               </div>
 
               {/* PARTIDO LOGO COMPACTO */}
@@ -128,16 +129,16 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* BLOQUE NÚMERO 102 CENTRAL - Ajustado para no salirse */}
-            <div className="flex flex-col items-center justify-center relative scale-95 md:scale-100 mt-2 md:mt-0 pr-4 md:pr-0">
+            {/* BLOQUE NÚMERO 102 CENTRAL - Redimensionado para mayor seguridad de margen */}
+            <div className="flex flex-col items-center justify-center relative scale-90 md:scale-95 lg:scale-100 mt-2 md:mt-0 md:pr-4">
               <div className="relative">
-                <span className="absolute inset-0 text-[5.5rem] md:text-[10rem] lg:text-[12rem] font-black text-[#1e3a8a] leading-none italic translate-x-1 translate-y-1 md:translate-x-2 md:translate-y-2 opacity-80">102</span>
-                <span className="relative text-[5.5rem] md:text-[10rem] lg:text-[12rem] font-black text-[#facc15] leading-none italic">102</span>
+                <span className="absolute inset-0 text-[5.5rem] md:text-[9rem] lg:text-[11rem] font-black text-[#1e3a8a] leading-none italic translate-x-1 translate-y-1 md:translate-x-2 md:translate-y-2 opacity-80">102</span>
+                <span className="relative text-[5.5rem] md:text-[9rem] lg:text-[11rem] font-black text-[#facc15] leading-none italic">102</span>
               </div>
               
               <div className="flex items-center gap-3 md:gap-4 -mt-3 md:-mt-6">
                 <div className="h-[2px] md:h-[3px] w-6 md:w-10 bg-[#0ea5e9]"></div>
-                <span className="text-[#0ea5e9] font-black text-xl md:text-5xl lg:text-6xl tracking-[0.1em] uppercase">CÁMARA</span>
+                <span className="text-[#0ea5e9] font-black text-xl md:text-4xl lg:text-5xl tracking-[0.1em] uppercase">CÁMARA</span>
                 <div className="h-[2px] md:h-[3px] w-6 md:w-10 bg-[#0ea5e9]"></div>
               </div>
             </div>
@@ -233,7 +234,7 @@ const App: React.FC = () => {
 
           <div className="bg-[#1e3a8a] p-6 rounded-2xl border border-blue-700 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-sky-400 uppercase tracking-widest">Estado Operativo</h4>
+              <h4 className="text-size-xs font-black text-sky-400 uppercase tracking-widest">Estado Operativo</h4>
               <span className="bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">ACTIVO</span>
             </div>
             <p className="text-xs text-blue-100/70 leading-relaxed italic">
