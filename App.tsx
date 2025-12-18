@@ -75,7 +75,7 @@ const App: React.FC = () => {
       <header className="relative bg-white rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] flex flex-col md:flex-row h-auto md:h-[320px] border border-slate-100 group">
         
         {/* LADO IZQUIERDO: BRANDING GRÁFICO (SIN IMAGEN) */}
-        <div className="md:w-[30%] relative bg-gradient-to-br from-[#facc15] to-[#eab308] flex items-center justify-center overflow-hidden">
+        <div className="md:w-[28%] relative bg-gradient-to-br from-[#facc15] to-[#eab308] flex items-center justify-center overflow-hidden">
           {/* Corte diagonal estilizado */}
           <div className="absolute top-0 right-0 h-full w-full bg-white transform translate-x-1/2 -skew-x-[15deg] z-10"></div>
           
@@ -96,7 +96,7 @@ const App: React.FC = () => {
         </div>
 
         {/* LADO DERECHO: COMPOSICIÓN ESTRATÉGICA */}
-        <div className="md:w-[70%] bg-white p-8 md:px-14 flex flex-col justify-center relative">
+        <div className="md:w-[72%] bg-white p-8 md:px-14 flex flex-col justify-center relative">
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                style={{ backgroundImage: 'radial-gradient(circle, #1e3a8a 1.2px, transparent 1.2px)', backgroundSize: '30px 30px' }}>
           </div>
@@ -109,9 +109,9 @@ const App: React.FC = () => {
                 YO VOTO
               </div>
               
-              <div className="flex flex-col -space-y-5">
-                <span className="text-[#1e3a8a] font-black text-3xl tracking-tighter uppercase opacity-30 ml-2">EDUAR</span>
-                <h1 className="text-[#1e3a8a] font-black text-7xl md:text-[8.5rem] tracking-tighter uppercase leading-[0.8] mb-4">TRIANA</h1>
+              <div className="flex flex-col -space-y-1 md:-space-y-2">
+                <span className="text-[#1e3a8a] font-black text-4xl md:text-5xl tracking-tighter uppercase ml-2 drop-shadow-sm">EDUAR</span>
+                <h1 className="text-[#1e3a8a] font-black text-7xl md:text-[9.5rem] tracking-tighter uppercase leading-[0.8] mb-4">TRIANA</h1>
               </div>
 
               {/* PARTIDO LOGO COMPACTO */}

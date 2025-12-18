@@ -35,7 +35,7 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
                 {stat.value}
               </span>
               {stat.highlight && (
-                <span className="text-[10px] font-bold text-blue-900/60 mt-1 uppercase">
+                <span className="text-[11px] font-black text-blue-900 uppercase mt-1 tracking-tight">
                   Eduar Triana 102
                 </span>
               )}
@@ -52,7 +52,7 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
         <div className="flex justify-between items-end mb-3">
           <div className="space-y-1">
             <h4 className="text-[10px] font-black text-sky-400 uppercase tracking-[0.2em]">Ruta a la Victoria</h4>
-            <div className="text-xl font-black text-white">Consolidación Territorio 102</div>
+            <div className="text-xl font-black text-white uppercase tracking-tighter">Consolidación Territorio Eduar Triana 102</div>
           </div>
           <div className="text-right">
             <span className="text-2xl font-black text-amber-400">
@@ -69,7 +69,7 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
         </div>
         <div className="flex justify-between mt-3 text-[10px] text-slate-500 font-bold uppercase">
           <span className="flex items-center gap-1"><i className="fa-solid fa-flag-checkered text-sky-500"></i> Inicio</span>
-          <span className="text-amber-400/80 animate-pulse tracking-widest italic">Trabajando con mano firme...</span>
+          <span className="text-amber-400 font-black animate-pulse tracking-widest italic uppercase">Eduar Triana #102 Mano Firme</span>
           <span>Meta: {targetVotes.toLocaleString()} Votos Identificados</span>
         </div>
       </div>
