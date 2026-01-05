@@ -73,62 +73,21 @@ const App: React.FC = () => {
     setVoteRecords(updated);
     setLastRecord(newRecord); 
     syncWithCloud(updated).catch(() => {});
-
-    // FORMATO DE MENSAJE "ESTILO TARJETA" PARA WHATSAPP
-    const messages = SECTOR_MESSAGES[record.actorId] || ["¡Bienvenido al equipo de la victoria!"];
-    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
-    const voterCount = updated.length;
-    
-    const wsText = `*━━━━━━━━━━━━━━━*
-*🔴 REGISTRO OFICIAL*
-*━━━━━━━━━━━━━━━*
-
-*NÚMERO ${voterCount}*
-_CIUDADANO IDENTIFICADO BOYACÁ_
-
-*HOLA, ${record.voterName.toUpperCase()}* 👋
-
-_"${randomMsg}"_
-
-*━━━━━━━━━━━━━━━*
-*EDUAR TRIANA | 102*
-_Cámara de Representantes_
-*#UnidosPorTiBoyacá* 🇨🇴
-*━━━━━━━━━━━━━━━*`;
-
-    const encodedText = encodeURIComponent(wsText);
-    const cleanPhone = record.phoneNumber.replace(/\D/g, '');
-    const finalPhone = cleanPhone.startsWith('57') ? cleanPhone : `57${cleanPhone}`;
-    
-    setTimeout(() => {
-      window.open(`https://wa.me/${finalPhone}?text=${encodedText}`, '_blank');
-    }, 800);
   };
 
   const handleManualAccess = () => {
     const code = prompt("Ingrese código de acceso (102 para alternar modo):");
     if (code === "102") {
-      if (isCollectorViewActive) {
-        handleExitCollector();
-      } else {
-        setIsCollectorViewActive(true);
-      }
+      setIsCollectorViewActive(!isCollectorViewActive);
     } else if (code) {
       alert("Código incorrecto");
     }
   };
 
-  const handleExitCollector = () => {
-    localStorage.removeItem('v102_collector_active');
-    const url = new URL(window.location.href);
-    url.searchParams.delete('mode');
-    window.history.replaceState({}, '', url.pathname + url.search);
-    setIsCollectorViewActive(false);
-  };
-
+  // MODO RECOLECTOR BLINDADO (SIN RETORNO)
   if (isCollectorViewActive) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center animate-in fade-in duration-500">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center animate-in fade-in duration-500">
         {lastRecord && (
           <ThankYouModal 
             voterName={lastRecord.voterName} 
@@ -141,22 +100,22 @@ _Cámara de Representantes_
         
         <div className="max-w-md w-full px-6 pt-12 pb-24 space-y-10">
           <header className="text-center space-y-5">
-            <div className="flex justify-center gap-3">
-               <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                  <i className="fa-solid fa-cloud-bolt animate-pulse"></i>
-                  SISTEMA 102 EN LÍNEA
+            <div className="flex justify-center">
+               <div className="bg-emerald-500 text-white px-5 py-2 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-2xl border border-white/20 animate-pulse">
+                  <i className="fa-solid fa-satellite-dish"></i>
+                  SISTEMA DE CAPTACIÓN 102
                </div>
             </div>
             <div className="space-y-1">
-              <h1 className="text-6xl font-black text-white tracking-tighter uppercase leading-none">
-                TRIANA <span className="text-[#facc15]">102</span>
+              <h1 className="text-7xl font-black text-white tracking-tighter uppercase leading-none italic">
+                TRIANA <span className="text-[#facc15] non-italic">102</span>
               </h1>
-              <p className="text-sky-400 font-black text-xs tracking-[0.4em] uppercase italic opacity-70">Registro Territorial Paipa</p>
+              <p className="text-sky-400 font-black text-[10px] tracking-[0.4em] uppercase italic opacity-70">REGISTRO TERRITORIAL PAIPA</p>
             </div>
           </header>
 
-          <div className="bg-slate-900/60 rounded-[3rem] border border-slate-800 shadow-3xl backdrop-blur-xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
+          <div className="bg-slate-900/40 rounded-[3.5rem] border-2 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
             <VoteRegistry 
               actors={ACTORS} 
               records={[]} 
@@ -166,27 +125,17 @@ _Cámara de Representantes_
             />
           </div>
 
-          <div className="flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-6 opacity-20 hover:opacity-100 transition-opacity">
             <button 
-              onClick={() => {
-                setIsSyncing(true);
-                syncWithCloud(voteRecords).finally(() => {
-                  setIsSyncing(false);
-                });
-              }}
-              className="bg-slate-900/40 hover:bg-slate-800 text-slate-400 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-800/50 flex items-center gap-3"
+              onClick={handleManualAccess}
+              className="p-4 rounded-xl text-slate-700 hover:text-slate-500 transition-all"
             >
-              <i className={`fa-solid fa-arrows-rotate ${isSyncing ? 'fa-spin' : ''}`}></i>
-              {isSyncing ? 'Sincronizar Datos' : 'Sincronizar Datos'}
+              <i className="fa-solid fa-lock text-xs"></i>
             </button>
-            
-            <button 
-              onClick={handleExitCollector}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-8 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all border border-red-500/20 shadow-lg shadow-red-500/5"
-            >
-              <i className="fa-solid fa-right-from-bracket mr-2"></i>
-              Salir del Modo Recolector
-            </button>
+            <div className="flex items-center gap-3 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">
+               <i className={`fa-solid fa-sync ${isSyncing ? 'fa-spin text-amber-500' : ''}`}></i>
+               {isSyncing ? 'SICRONIZANDO CON LA NUBE...' : 'RECOLECTOR VINCULADO'}
+            </div>
           </div>
         </div>
       </div>
@@ -209,23 +158,17 @@ _Cámara de Representantes_
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-950/98 backdrop-blur-xl" onClick={() => setShowQRModal(false)}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center border-[8px] border-amber-400 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <i className="fa-solid fa-triangle-exclamation text-3xl text-amber-600"></i>
+              <i className="fa-solid fa-qrcode text-3xl text-amber-600"></i>
             </div>
-            <h3 className="text-blue-900 font-black text-xl uppercase italic mb-4">Aviso de Link Temporal</h3>
+            <h3 className="text-blue-900 font-black text-xl uppercase italic mb-4">Acceso Recolectores</h3>
             <p className="text-slate-500 text-xs font-bold mb-6 leading-relaxed">
-              En este entorno de prueba, los links de WhatsApp no funcionan. Usa el código <span className="text-blue-900 font-black">102</span>.
+              Activa este modo en los dispositivos de tu equipo para un registro sin distracciones.
             </p>
-            
             <div className="bg-blue-50 p-6 rounded-2xl mb-8 text-left space-y-3 border border-blue-100">
-              <p className="text-blue-900 text-[10px] font-black uppercase tracking-widest">Cómo entrar en otro móvil:</p>
-              <p className="text-blue-700 text-[11px] font-bold leading-tight">
-                1. Abre la app en el otro celular.<br/>
-                2. Toca el <i className="fa-solid fa-lock text-blue-900"></i> al final de la página.<br/>
-                3. Código: <span className="bg-blue-900 text-white px-2 py-0.5 rounded ml-1">102</span>
-              </p>
+              <p className="text-blue-900 text-[10px] font-black uppercase tracking-widest">Código:</p>
+              <p className="text-blue-900 text-2xl font-black tracking-tighter">TRIANA-102</p>
             </div>
-
-            <button onClick={() => setShowQRModal(false)} className="w-full bg-blue-950 text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl">Entendido</button>
+            <button onClick={() => setShowQRModal(false)} className="w-full bg-blue-950 text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl">Cerrar</button>
           </div>
         </div>
       )}
@@ -251,16 +194,15 @@ _Cámara de Representantes_
             <button 
               onClick={() => setShowQRModal(true)}
               className="bg-amber-500 hover:bg-amber-600 text-white w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95"
-              title="Instrucciones para compartir"
             >
-              <i className="fa-solid fa-circle-info text-xl"></i>
+              <i className="fa-solid fa-qrcode text-xl"></i>
             </button>
 
             <button 
               onClick={() => setIsCollectorViewActive(true)} 
               className="bg-blue-900 hover:bg-blue-950 text-white px-8 py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-4 border-2 border-white/20"
             >
-              <i className="fa-solid fa-users-viewfinder text-xl text-amber-400"></i>
+              <i className="fa-solid fa-user-plus text-xl text-amber-400"></i>
               <span className="font-black uppercase text-xs tracking-widest">Activar Recolector</span>
             </button>
           </div>
@@ -296,22 +238,19 @@ _Cámara de Representantes_
                <i className={`fa-solid ${isSyncing ? 'fa-sync fa-spin' : 'fa-cloud-check'} text-4xl ${isSyncing ? 'text-amber-400' : 'text-emerald-400'}`}></i>
             </div>
             <div className="space-y-3">
-               <h4 className="text-white font-black uppercase text-sm tracking-[0.3em]">Central de Inteligencia</h4>
+               <h4 className="text-white font-black uppercase text-sm tracking-[0.3em]">Gestión Central 102</h4>
                <p className="text-white/30 text-[10px] font-black uppercase tracking-widest leading-relaxed">
-                 {isSyncing ? 'Consolidando base de datos...' : 'Red Paipa 102 Vinculada'}
+                 Sistema de Control Electoral Triana Mano Firme
                </p>
             </div>
           </div>
         </aside>
       </div>
 
-      <footer className="pt-20 pb-10 flex justify-between items-center opacity-30 hover:opacity-100 transition-opacity">
-        <button onClick={handleManualAccess} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-all shadow-lg active:scale-90">
-          <i className="fa-solid fa-lock text-slate-500 text-xs"></i>
+      <footer className="pt-20 pb-10 flex justify-center opacity-10 hover:opacity-100 transition-opacity">
+        <button onClick={handleManualAccess} className="p-4 rounded-xl hover:bg-slate-800 transition-all">
+          <i className="fa-solid fa-key text-slate-700 text-xs"></i>
         </button>
-        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600">
-          Eduar Triana 102 • Paipa • 2024
-        </div>
       </footer>
     </div>
   );
