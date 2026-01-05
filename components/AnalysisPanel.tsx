@@ -7,6 +7,22 @@ interface Props {
 }
 
 const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
+  const getIcon = (category: string, id: string) => {
+    if (id === 'transportadores') return 'fa-truck-moving';
+    if (id === 'taxistas') return 'fa-taxi';
+    if (id === 'ferreterias') return 'fa-tools';
+    if (id === 'carnicos') return 'fa-drumstick-bite';
+    
+    switch (category) {
+      case 'CORE': return 'fa-industry';
+      case 'SUPPLIER': return 'fa-truck';
+      case 'CONSUMPTION': return 'fa-users';
+      case 'PROFESSIONAL': return 'fa-user-graduate';
+      case 'POLITICAL': return 'fa-landmark';
+      default: return 'fa-circle-dot';
+    }
+  };
+
   return (
     <div className="space-y-6 h-full overflow-y-auto pr-2 custom-scrollbar">
       {/* Información del Actor Seleccionado */}
@@ -25,17 +41,16 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
                 selectedActor.category === 'CORE' ? 'bg-blue-900/50 text-blue-300' :
                 selectedActor.category === 'SUPPLIER' ? 'bg-sky-500/20 text-sky-500' :
                 selectedActor.category === 'CONSUMPTION' ? 'bg-slate-700 text-white' :
+                selectedActor.category === 'PROFESSIONAL' ? 'bg-emerald-500/20 text-emerald-400' :
                 'bg-amber-400 text-blue-900'
               }`}>
-                <i className={`fa-solid text-xl ${
-                  selectedActor.category === 'CORE' ? 'fa-industry' :
-                  selectedActor.category === 'SUPPLIER' ? 'fa-truck' :
-                  selectedActor.category === 'CONSUMPTION' ? 'fa-users' :
-                  'fa-landmark'
-                }`}></i>
+                <i className={`fa-solid text-xl ${getIcon(selectedActor.category, selectedActor.id)}`}></i>
               </div>
               <div className="space-y-1">
-                <div className="text-[10px] font-black text-sky-500 uppercase tracking-widest">Actor Estratégico</div>
+                <div className="text-[10px] font-black text-sky-500 uppercase tracking-widest">
+                  {selectedActor.category === 'PROFESSIONAL' ? 'Sector Especializado' : 
+                   selectedActor.category === 'SUPPLIER' ? 'Socio Logístico' : 'Actor Estratégico'}
+                </div>
                 <h3 className="text-2xl font-black text-white leading-tight">{selectedActor.name}</h3>
               </div>
             </div>
@@ -50,7 +65,7 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
                 <div className="flex items-center justify-between p-4 bg-blue-900/10 rounded-lg border border-blue-900/30">
                   <div className="flex items-center gap-2">
                     <i className="fa-solid fa-users-gear text-sky-400"></i>
-                    <span className="text-xs font-bold text-slate-300 uppercase">Potencial de Votos</span>
+                    <span className="text-xs font-bold text-slate-300 uppercase">Fuerza Estimada</span>
                   </div>
                   <span className="text-xl font-black text-amber-400">{selectedActor.baseCount.toLocaleString()}</span>
                 </div>
@@ -60,7 +75,7 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
             <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Estado: Prioritario
+                Estado: Activo
               </div>
               <div className="text-[10px] font-black text-amber-400 italic">
                 Triana #102

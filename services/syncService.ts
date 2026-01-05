@@ -1,62 +1,62 @@
 
 import { VoteRecord } from "../types";
 
-// API de almacenamiento público (Para producción usar Supabase/Firebase)
-const SHARED_STORE_URL = "https://api.restful-api.dev/objects";
-const ROOM_ID = "paipa-102-triana-vfinal"; // Nuevo ID para asegurar consistencia
+const API_BASE = "https://api.restful-api.dev/objects";
+// ID único para la campaña de Eduar Triana en Paipa
+const STORAGE_ID = "paipa_triana_v14_live"; 
 
 export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    // 1. Obtener la versión actual de la nube
-    const response = await fetch(`${SHARED_STORE_URL}?id=${ROOM_ID}`);
-    const results = await response.json();
-    let cloudEntry = results.find((item: any) => item.name === ROOM_ID);
+    const response = await fetch(API_BASE);
+    if (!response.ok) throw new Error("API Offline");
+    
+    const allObjects = await response.json();
+    const existing = Array.isArray(allObjects) 
+      ? allObjects.find((o: any) => o.name === STORAGE_ID)
+      : null;
 
-    // 2. Si no existe en la nube, la creamos con los datos locales
-    if (!cloudEntry) {
-      const createResponse = await fetch(SHARED_STORE_URL, {
+    if (!existing) {
+      if (localRecords.length === 0) return [];
+      
+      const createRes = await fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: ROOM_ID,
-          data: { records: localRecords, lastUpdate: Date.now() }
+          name: STORAGE_ID,
+          data: { records: localRecords }
         })
       });
-      const newEntry = await createResponse.json();
-      return newEntry.data.records || [];
+      const created = await createRes.json();
+      return created.data?.records || localRecords;
     }
 
-    // 3. Fusión inteligente: Unimos locales y nube sin duplicados por ID
-    const cloudRecords: VoteRecord[] = cloudEntry.data?.records || [];
+    const cloudRecords: VoteRecord[] = existing.data?.records || [];
     
-    // El mapa nos ayuda a evitar duplicados eficientemente
-    const recordsMap = new Map<string, VoteRecord>();
+    // Diccionario para evitar duplicados por ID
+    const map = new Map<string, VoteRecord>();
     
-    // Primero agregamos lo de la nube
-    cloudRecords.forEach(r => recordsMap.set(r.id, r));
-    
-    // Luego agregamos lo local (si hay conflicto, lo local es más nuevo)
-    localRecords.forEach(r => recordsMap.set(r.id, r));
+    // Importante: La nube manda sobre la base local para que el administrador
+    // reciba lo que los recolectores están subiendo.
+    cloudRecords.forEach(r => map.set(r.id, r));
+    localRecords.forEach(r => map.set(r.id, r));
 
-    const merged = Array.from(recordsMap.values())
-      .sort((a, b) => b.timestamp - a.timestamp); // Ordenar por fecha (más reciente arriba)
+    const merged = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
 
-    // 4. Actualizamos la nube solo si hay algo nuevo para no saturar
-    if (merged.length > cloudRecords.length || JSON.stringify(merged) !== JSON.stringify(cloudRecords)) {
-      await fetch(`${SHARED_STORE_URL}/${cloudEntry.id}`, {
+    // Si hay datos nuevos (ya sea locales o de otros dispositivos), actualizamos la nube
+    if (merged.length > cloudRecords.length || merged.length > localRecords.length) {
+      await fetch(`${API_BASE}/${existing.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: ROOM_ID,
-          data: { records: merged, lastUpdate: Date.now() }
+          name: STORAGE_ID,
+          data: { records: merged }
         })
       });
     }
 
     return merged;
   } catch (error) {
-    console.error("Error crítico de sincronización:", error);
-    // En caso de error, devolvemos los locales para no perder el progreso del usuario
+    console.warn("Sync Mode: Local Recovery", error);
     return localRecords;
   }
 };

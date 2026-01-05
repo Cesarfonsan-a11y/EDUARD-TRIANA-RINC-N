@@ -8,8 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script>
-      // Polyfill para process.env necesario en entornos de navegador puro
-      window.process = { env: { NODE_ENV: 'production' } };
+      // Aseguramos que process esté disponible globalmente antes de cargar los módulos
+      window.process = { 
+        env: { 
+          NODE_ENV: 'production',
+          API_KEY: '' // El backend inyectará la clave aquí o vía reemplazo de string
+        } 
+      };
     </script>
   <script type="importmap">
 {
@@ -20,7 +25,8 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "d3": "https://esm.sh/d3@^7.9.0",
     "xlsx": "https://esm.sh/xlsx@0.18.5",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1"
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "qrcode": "https://esm.sh/qrcode@1.5.3"
   }
 }
 </script>

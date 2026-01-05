@@ -8,10 +8,12 @@ interface Props {
   records: VoteRecord[];
   onAddRecord: (record: Omit<VoteRecord, 'id' | 'timestamp'>) => void;
   onDeleteRecord: (id: string) => void;
+  isPublic?: boolean;
 }
 
-const VoteRegistry: React.FC<Props> = ({ actors, records, onAddRecord, onDeleteRecord }) => {
-  const [selectedActor, setSelectedActor] = useState(actors[0].id);
+const VoteRegistry: React.FC<Props> = ({ actors, records, onAddRecord, onDeleteRecord, isPublic = false }) => {
+  const filteredActors = actors.filter(a => a.id !== 'rep_camara');
+  const [selectedActor, setSelectedActor] = useState(filteredActors[0].id);
   const [voterName, setVoterName] = useState('');
   const [idNumber, setIdNumber] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -34,168 +36,154 @@ const VoteRegistry: React.FC<Props> = ({ actors, records, onAddRecord, onDeleteR
 
   const handleExportExcel = () => {
     if (records.length === 0) return;
-
-    const dataToExport = records.map(record => {
-      const actor = actors.find(a => a.id === record.actorId);
-      return {
-        'Cédula': record.idNumber,
-        'Nombre Completo': record.voterName,
-        'Celular': record.phoneNumber,
-        'Actor Vinculado': actor?.name || 'No definido',
-        'Fecha de Registro': new Date(record.timestamp).toLocaleString('es-CO')
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const wscols = [
-      { wch: 15 }, 
-      { wch: 35 }, 
-      { wch: 15 }, 
-      { wch: 30 }, 
-      { wch: 25 }, 
-    ];
-    worksheet['!cols'] = wscols;
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Votantes Identificados');
-
-    const dateStr = new Date().toISOString().split('T')[0];
-    const fileName = `Base_EduarTriana_102_${dateStr}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    const data = records.map(r => ({
+      'Cédula': r.idNumber,
+      'Nombre': r.voterName,
+      'Celular': r.phoneNumber,
+      'Sector': actors.find(a => a.id === r.actorId)?.name,
+      'Fecha': new Date(r.timestamp).toLocaleString()
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Base102");
+    XLSX.writeFile(wb, `Base_Triana_102_${Date.now()}.xlsx`);
   };
 
-  const totalRegistered = records.length;
+  // VISTA PÚBLICA (MODO RECOLECTOR - SOLO 4 CAMPOS)
+  if (isPublic) {
+    return (
+      <div className="p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
+            {/* 1. CEDULA */}
+            <div className="space-y-2">
+              <label className="text-[11px] text-[#facc15] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                <i className="fa-solid fa-id-card"></i> Número de Cédula
+              </label>
+              <input 
+                type="text" 
+                inputMode="numeric"
+                value={idNumber} 
+                onChange={e => setIdNumber(e.target.value.replace(/\D/g, ''))} 
+                placeholder="000.000.000" 
+                className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-6 text-2xl text-white focus:border-[#facc15] outline-none transition-all shadow-inner placeholder:text-slate-800 font-mono" 
+                required 
+              />
+            </div>
 
+            {/* 2. NOMBRE */}
+            <div className="space-y-2">
+              <label className="text-[11px] text-[#facc15] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                <i className="fa-solid fa-user"></i> Nombre Completo
+              </label>
+              <input 
+                type="text" 
+                value={voterName} 
+                onChange={e => setVoterName(e.target.value)} 
+                placeholder="Nombre del ciudadano..." 
+                className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-6 text-xl text-white focus:border-[#facc15] outline-none transition-all shadow-inner placeholder:text-slate-800" 
+                required 
+              />
+            </div>
+
+            {/* 3. CELULAR */}
+            <div className="space-y-2">
+              <label className="text-[11px] text-[#facc15] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                <i className="fa-solid fa-phone"></i> Celular / WhatsApp
+              </label>
+              <input 
+                type="tel" 
+                inputMode="tel"
+                value={phoneNumber} 
+                onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
+                placeholder="300 000 0000" 
+                className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-6 text-xl text-white focus:border-[#facc15] outline-none transition-all shadow-inner placeholder:text-slate-800" 
+                required 
+              />
+            </div>
+
+            {/* 4. SECTOR */}
+            <div className="space-y-2">
+              <label className="text-[11px] text-[#facc15] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                <i className="fa-solid fa-map-pin"></i> Sector de Registro
+              </label>
+              <div className="relative">
+                <select 
+                  value={selectedActor} 
+                  onChange={e => setSelectedActor(e.target.value)} 
+                  className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-6 text-xl text-white focus:border-[#facc15] outline-none cursor-pointer appearance-none shadow-inner"
+                >
+                  {filteredActors.map(a => <option key={a.id} value={a.id} className="bg-slate-900">{a.name}</option>)}
+                </select>
+                <i className="fa-solid fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-[#facc15] pointer-events-none"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-6">
+            <button 
+              type="submit" 
+              className="w-full bg-[#facc15] hover:bg-amber-500 text-blue-950 font-black py-8 rounded-[2.5rem] transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 text-2xl uppercase tracking-tighter"
+            >
+              <i className="fa-solid fa-save"></i>
+              GUARDAR REGISTRO
+            </button>
+            <p className="text-center text-[9px] text-slate-600 mt-6 uppercase tracking-widest">
+              Al guardar, se genera automáticamente el carnet de victoria
+            </p>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // VISTA ADMINISTRADOR (ORIGINAL CON TODAS LAS OPCIONES)
   return (
-    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-blue-900/30 pb-4 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-sky-500/20 p-2 rounded-lg">
-            <i className="fa-solid fa-id-card text-sky-400"></i>
+    <div className="bg-slate-900/40 p-6 md:p-8 rounded-[2rem] border border-slate-800 space-y-8">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-sky-500/20 p-3 rounded-xl border border-sky-500/30">
+            <i className="fa-solid fa-id-card text-sky-400 text-xl"></i>
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Captación de Votantes (Base 102)</h3>
-            <p className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">Campaña Eduar Triana - Paipa</p>
+            <h3 className="text-xl font-black text-white uppercase tracking-tight">Consolidación Territorio 102</h3>
+            <p className="text-[10px] text-sky-400 font-black uppercase tracking-[0.2em]">Registro Centralizado - Paipa</p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={handleExportExcel}
-            disabled={records.length === 0}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-sky-900 text-slate-300 px-4 py-2 rounded-lg text-xs font-bold border border-slate-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group"
-          >
-            <i className="fa-solid fa-file-excel text-emerald-500 group-hover:scale-110 transition-transform"></i>
-            Exportar Excel
-          </button>
-          <div className="bg-sky-500/10 text-sky-400 px-4 py-2 rounded-lg text-sm font-black border border-sky-500/20 shadow-lg shadow-sky-500/5">
-            Total: {totalRegistered.toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-950/30 p-4 rounded-lg border border-slate-800/50">
-        <div className="space-y-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase ml-1">Cédula</label>
-          <input 
-            type="text" 
-            value={idNumber}
-            onChange={(e) => setIdNumber(e.target.value)}
-            placeholder="Documento..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 outline-none transition-all"
-            required
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase ml-1">Nombre Completo</label>
-          <input 
-            type="text" 
-            value={voterName}
-            onChange={(e) => setVoterName(e.target.value)}
-            placeholder="Nombres y Apellidos..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 outline-none transition-all"
-            required
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase ml-1">Celular</label>
-          <input 
-            type="tel" 
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            placeholder="310..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 outline-none transition-all"
-            required
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase ml-1">Vínculo Territorial</label>
-          <select 
-            value={selectedActor}
-            onChange={(e) => setSelectedActor(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:border-sky-500 outline-none appearance-none cursor-pointer"
-          >
-            {actors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        </div>
-        <button 
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 active:scale-95"
-        >
-          <i className="fa-solid fa-user-plus"></i>
-          REGISTRAR
+        <button onClick={handleExportExcel} disabled={records.length === 0} className="bg-slate-800 hover:bg-emerald-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-20 flex items-center gap-2">
+          <i className="fa-solid fa-file-excel"></i> Exportar Base Completa
         </button>
-      </form>
-
-      <div className="mt-6 max-h-[350px] overflow-y-auto custom-scrollbar border border-slate-800 rounded-lg shadow-inner bg-slate-950/20">
-        <table className="w-full text-left text-xs">
-          <thead className="sticky top-0 bg-slate-900 text-slate-500 uppercase font-black z-20 shadow-md">
-            <tr>
-              <th className="p-4 border-b border-slate-800">Cédula</th>
-              <th className="p-4 border-b border-slate-800">Nombre</th>
-              <th className="p-4 border-b border-slate-800">Celular</th>
-              <th className="p-4 border-b border-slate-800">Vínculo</th>
-              <th className="p-4 border-b border-slate-800 text-right">Acción</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/50">
-            {records.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-16 text-center text-slate-600 italic">
-                  <div className="flex flex-col items-center gap-2">
-                    <i className="fa-solid fa-database text-3xl opacity-10"></i>
-                    <span>Inicie la consolidación de la base 102</span>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              records.map(record => {
-                const actorName = actors.find(a => a.id === record.actorId)?.name;
-                return (
-                  <tr key={record.id} className="hover:bg-blue-900/10 transition-colors group">
-                    <td className="p-4 text-slate-300 font-mono tracking-tighter">{record.idNumber}</td>
-                    <td className="p-4 text-slate-100 font-bold uppercase tracking-tight">{record.voterName}</td>
-                    <td className="p-4 text-sky-400 font-mono">{record.phoneNumber}</td>
-                    <td className="p-4 text-slate-400">
-                      <span className="bg-sky-900/40 px-2.5 py-1 rounded text-[10px] border border-sky-800 font-bold text-sky-100 uppercase">
-                        {actorName}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button 
-                        onClick={() => onDeleteRecord(record.id)}
-                        className="text-slate-700 hover:text-red-500 p-2 rounded-full hover:bg-red-500/10 transition-all"
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
       </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Cédula</label>
+            <input type="text" value={idNumber} onChange={e => setIdNumber(e.target.value.replace(/\D/g, ''))} placeholder="Cédula..." className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 text-sm text-white focus:border-sky-500 outline-none transition-all shadow-inner" required />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Nombre</label>
+            <input type="text" value={voterName} onChange={e => setVoterName(e.target.value)} placeholder="Nombre..." className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 text-sm text-white focus:border-sky-500 outline-none transition-all shadow-inner" required />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Celular</label>
+            <input type="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} placeholder="Celular..." className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 text-sm text-white focus:border-sky-500 outline-none transition-all shadow-inner" required />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Sector</label>
+            <select value={selectedActor} onChange={e => setSelectedActor(e.target.value)} className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 text-sm text-white focus:border-sky-500 outline-none cursor-pointer shadow-inner appearance-none">
+              {filteredActors.map(a => <option key={a.id} value={a.id} className="bg-slate-900">{a.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-6 pt-6 border-t border-slate-800/50">
+          <button type="submit" className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black px-12 py-4 rounded-xl transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group">
+            <i className="fa-solid fa-plus-circle"></i>
+            <span className="tracking-widest uppercase">Añadir Registro Manual</span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

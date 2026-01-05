@@ -1,5 +1,5 @@
 
-export type ActorCategory = 'CORE' | 'SUPPLIER' | 'CONSUMPTION' | 'POLITICAL';
+export type ActorCategory = 'CORE' | 'SUPPLIER' | 'CONSUMPTION' | 'POLITICAL' | 'PROFESSIONAL';
 
 export interface ActorNode {
   id: string;
