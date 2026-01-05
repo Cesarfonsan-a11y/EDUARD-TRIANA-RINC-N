@@ -12,6 +12,9 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
     if (id === 'taxistas') return 'fa-taxi';
     if (id === 'ferreterias') return 'fa-tools';
     if (id === 'carnicos') return 'fa-drumstick-bite';
+    if (id === 'belleza') return 'fa-scissors';
+    if (id === 'empresarios') return 'fa-briefcase';
+    if (id === 'sin_actividad') return 'fa-person-walking';
     
     switch (category) {
       case 'CORE': return 'fa-industry';
@@ -25,7 +28,6 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
 
   return (
     <div className="space-y-6 h-full overflow-y-auto pr-2 custom-scrollbar">
-      {/* Información del Actor Seleccionado */}
       <div className="bg-slate-900/80 p-6 rounded-xl border border-slate-800 shadow-xl shadow-black/20">
         {!selectedActor ? (
           <div className="text-slate-500 text-center py-12 italic flex flex-col items-center gap-4">

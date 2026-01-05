@@ -66,6 +66,21 @@ export const SECTOR_MESSAGES: Record<string, string[]> = {
     "¡Maestro del sabor y la calidad! Tu labor garantiza que lo mejor de nuestra ganadería llegue con excelencia a la mesa.",
     "Orgullo de nuestra tradición cárnica. Gracias por tu esfuerzo diario manteniendo la soberanía alimentaria de Paipa.",
     "Calidad y servicio boyacense. Eres un eslabón crítico en la cadena de bienestar de nuestras familias."
+  ],
+  belleza: [
+    "¡Embajadora de la confianza! Tu talento resalta la belleza de nuestra gente y tu salón es el corazón de la comunidad. ¡Bienvenida!",
+    "Eres quien escucha y cuida a los vecinos cada día. Gracias por ser esa líder de opinión que Paipa necesita.",
+    "Transformas vidas con tus manos. Gracias por sumar tu brillo y tu respaldo a este proyecto de victoria."
+  ],
+  empresarios: [
+    "Visionario del desarrollo. Tu capacidad de generar empleo es el motor que mantiene fuerte a nuestra Paipa. ¡Bienvenido!",
+    "Gracias por creer en el talento local y por invertir en nuestra tierra. Juntos garantizaremos un entorno seguro para tu empresa.",
+    "Tu liderazgo empresarial es clave para que Boyacá sea potencia comercial. ¡Tu apoyo nos da la firmeza necesaria!"
+  ],
+  sin_actividad: [
+    "¡Tu voz es nuestra mayor fuerza! Estamos aquí para trabajar por las oportunidades que tú y tu familia merecen en Paipa.",
+    "Gracias por confiar en nosotros. Este proyecto es para que ningún paipano se sienta solo en su búsqueda de progreso.",
+    "Tu respaldo nos motiva a construir una ciudad con más empleo y bienestar para todos. ¡Bienvenido al equipo!"
   ]
 };
 
@@ -79,8 +94,12 @@ export const ACTORS: ActorNode[] = [
   { id: 'supermercados', name: '🛒 Supermercados', category: 'CONSUMPTION', description: 'Abastecimiento general y comercio a gran escala.', baseCount: 300 },
   { id: 'tenderos', name: '🏪 Tenderos', category: 'CONSUMPTION', description: 'Comercio de barrio y economía popular de cercanía.', baseCount: 400 },
   { id: 'carnicos', name: '🥩 Especialistas Cárnicos', category: 'CONSUMPTION', description: 'Fruver, carnicerías y puntos de cadena alimentaria.', baseCount: 130 },
-  { id: 'taxistas', name: '🚕 Taxistas', category: 'PROFESSIONAL', description: 'Gremio de transporte público urbano y líderes sociales.', baseCount: 180 },
+  { id: 'taxistas', name: '碰 Taxistas', category: 'PROFESSIONAL', description: 'Gremio de transporte público urbano y líderes sociales.', baseCount: 180 },
   
+  { id: 'belleza', name: '✂️ Especialistas Belleza', category: 'PROFESSIONAL', description: 'Estilistas, barberos y centros de estética. Líderes de opinión barrial.', baseCount: 250 },
+  { id: 'empresarios', name: '💼 Empresarios Locales', category: 'PROFESSIONAL', description: 'Generadores de empleo y líderes de inversión regional.', baseCount: 140 },
+  { id: 'sin_actividad', name: '👥 Base Ciudadana', category: 'CONSUMPTION', description: 'Ciudadanos sin actividad económica específica, estudiantes y amas de casa.', baseCount: 600 },
+
   { id: 'ingenieros', name: '📐 Ingenieros', category: 'PROFESSIONAL', description: 'Cuerpo técnico y de infraestructura. Voto de opinión calificado.', baseCount: 200 },
   { id: 'arquitectos', name: '🏛️ Arquitectos', category: 'PROFESSIONAL', description: 'Planeación urbana y diseño regional.', baseCount: 120 },
   { id: 'veterinarios', name: '🐾 Veterinarios', category: 'PROFESSIONAL', description: 'Salud animal y soporte a la vocación rural.', baseCount: 85 },
@@ -103,4 +122,7 @@ export const RELATIONS: RelationLink[] = [
   { source: 'veterinarios', target: 'rep_camara', type: 'VOTING_INFLUENCE', label: 'Red Rural' },
   { source: 'agronomos', target: 'rep_camara', type: 'VOTING_INFLUENCE', label: 'Voto Agrario' },
   { source: 'tenderos', target: 'rep_camara', type: 'VOTING_INFLUENCE', label: 'Base Popular' },
+  { source: 'belleza', target: 'rep_camara', type: 'VOTING_INFLUENCE', label: 'Voto Social' },
+  { source: 'empresarios', target: 'rep_camara', type: 'VOTING_INFLUENCE', label: 'Respaldo Económico' },
+  { source: 'sin_actividad', target: 'rep_camara', type: 'VOTING_INFLUENCE', label: 'Voto Opinión' },
 ];
