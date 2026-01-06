@@ -14,13 +14,18 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const prevVotes = useRef(currentVotes);
 
-  // Efecto visual de "Movimiento" cuando el contador cambia
+  // EFECTO VISUAL DE CAMBIO
   useEffect(() => {
     if (currentVotes !== prevVotes.current) {
       setIsAnimating(true);
-      if ('vibrate' in navigator) navigator.vibrate(50);
-      const timer = setTimeout(() => setIsAnimating(false), 2000);
-      prevVotes.current = currentVotes;
+      // Feedback táctico si está disponible
+      if ('vibrate' in navigator) navigator.vibrate([10, 30, 10]);
+      
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+        prevVotes.current = currentVotes;
+      }, 2500);
+      
       return () => clearTimeout(timer);
     }
   }, [currentVotes]);
@@ -42,68 +47,68 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
   ];
 
   return (
-    <div className="space-y-4 mb-8">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div className="space-y-6 mb-12">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {stats.map((stat, i) => (
           <div 
             key={i} 
-            className={`${stat.color} p-5 rounded-[2rem] shadow-2xl flex flex-col justify-between min-h-[140px] transition-all duration-500 border border-white/5 relative group overflow-hidden ${stat.highlight ? 'ring-2 ring-amber-400/50 scale-105 z-20' : ''} ${stat.animate ? 'ring-4 ring-amber-400 shadow-[0_0_50px_rgba(245,158,11,0.6)] bg-blue-900' : ''}`}
+            className={`${stat.color} p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between min-h-[160px] transition-all duration-700 border border-white/5 relative group overflow-hidden ${stat.highlight ? 'ring-2 ring-amber-400/50 scale-105 z-20' : ''} ${stat.animate ? 'ring-8 ring-amber-400 shadow-[0_0_100px_rgba(245,158,11,0.8)] bg-blue-900' : ''}`}
           >
-            <span className={`text-[9px] font-black uppercase tracking-[0.2em] mb-1 z-10 ${stat.highlight ? 'text-amber-400' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-[0.3em] mb-2 z-10 ${stat.highlight ? 'text-amber-400' : 'text-slate-500'}`}>
               {stat.label} {stat.number && `(${stat.number})`}
             </span>
             <div className="flex flex-col z-10">
-              <span className={`text-4xl md:text-5xl font-black tracking-tighter ${stat.textColor} leading-none transition-all duration-300 ${stat.animate ? 'scale-125 translate-x-1' : 'scale-100'}`}>
+              <span className={`text-5xl md:text-6xl font-black tracking-tighter ${stat.textColor} leading-none transition-all duration-500 ${stat.animate ? 'scale-125 translate-x-2' : 'scale-100'}`}>
                 {stat.value}
               </span>
               {stat.highlight && (
-                <div className="mt-3 flex items-center gap-2">
-                   <div className="flex gap-0.5">
-                      <span className={`w-1 h-1 rounded-full bg-amber-400 ${stat.animate ? 'animate-bounce' : 'opacity-20'}`}></span>
-                      <span className={`w-1 h-1 rounded-full bg-amber-400 ${stat.animate ? 'animate-bounce delay-75' : 'opacity-20'}`}></span>
-                      <span className={`w-1 h-1 rounded-full bg-amber-400 ${stat.animate ? 'animate-bounce delay-150' : 'opacity-20'}`}></span>
+                <div className="mt-4 flex items-center gap-3">
+                   <div className="flex gap-1">
+                      <span className={`w-2 h-2 rounded-full bg-amber-400 ${stat.animate ? 'animate-bounce' : 'opacity-20'}`}></span>
+                      <span className={`w-2 h-2 rounded-full bg-amber-400 ${stat.animate ? 'animate-bounce delay-150' : 'opacity-20'}`}></span>
+                      <span className={`w-2 h-2 rounded-full bg-amber-400 ${stat.animate ? 'animate-bounce delay-300' : 'opacity-20'}`}></span>
                    </div>
-                   <span className="text-[10px] font-black text-white uppercase tracking-tighter">
-                     {stat.animate ? 'ACTUALIZANDO...' : 'RED EN VIVO'}
+                   <span className="text-[11px] font-black text-white uppercase tracking-widest">
+                     {stat.animate ? '¡DATO ENTRANTE!' : 'CONTEO EN VIVO'}
                    </span>
                 </div>
               )}
             </div>
-            <div className={`absolute -right-6 -bottom-6 opacity-10 text-7xl transition-transform duration-700 ${stat.animate ? 'rotate-45 scale-150 opacity-30' : 'group-hover:rotate-12'}`}>
+            <div className={`absolute -right-8 -bottom-8 opacity-[0.05] text-[10rem] transition-all duration-1000 ${stat.animate ? 'rotate-[45deg] scale-150 opacity-40 translate-x-4' : 'group-hover:rotate-12'}`}>
               <i className="fa-solid fa-bolt text-white"></i>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-900 p-8 rounded-[3rem] border border-slate-800 shadow-2xl relative overflow-hidden">
         {isAnimating && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent animate-shimmer pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/20 to-transparent animate-shimmer pointer-events-none"></div>
         )}
-        <div className="flex justify-between items-end mb-4">
-          <div className="space-y-1">
-            <h4 className="text-[11px] font-black text-sky-400 uppercase tracking-[0.3em] flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
+        <div className="flex justify-between items-end mb-5">
+          <div className="space-y-2">
+            <h4 className="text-xs font-black text-sky-400 uppercase tracking-[0.4em] flex items-center gap-3">
+              <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
               </span>
-              Sincronización Global
+              CENTRAL DE DATOS 102
             </h4>
-            <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Triana 102 • Paipa Victoriosa</div>
+            <div className="text-3xl font-black text-white uppercase tracking-tighter italic">Triana • Fuerza Paipa Boyacá</div>
           </div>
           <div className="text-right">
-            <span className={`text-3xl font-black text-amber-400 transition-all block ${isAnimating ? 'scale-110' : ''}`}>
-              {progressPercent.toFixed(1)}%
+            <span className={`text-4xl font-black text-amber-400 transition-all block ${isAnimating ? 'scale-125 translate-y-[-4px]' : ''}`}>
+              {progressPercent.toFixed(2)}%
             </span>
-            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Avance de Meta</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.2em]">Porcentaje de Victoria</div>
           </div>
         </div>
-        <div className="w-full bg-slate-950 h-5 rounded-full overflow-hidden p-1.5 border border-slate-800 shadow-inner relative">
+        <div className="w-full bg-slate-950 h-6 rounded-full overflow-hidden p-2 border border-slate-800 shadow-inner relative">
           <div 
-            className="h-full bg-gradient-to-r from-blue-700 via-sky-400 to-amber-400 rounded-full transition-all duration-[1500ms] ease-out shadow-[0_0_20px_rgba(251,191,36,0.4)] relative"
+            className="h-full bg-gradient-to-r from-blue-800 via-sky-500 to-amber-400 rounded-full transition-all duration-[2000ms] ease-out shadow-[0_0_30px_rgba(251,191,36,0.5)] relative"
             style={{ width: `${progressPercent}%` }}
           >
-            <div className="absolute top-0 right-0 h-full w-8 bg-white/20 blur-sm animate-pulse"></div>
+            <div className="absolute top-0 right-0 h-full w-12 bg-white/30 blur-md animate-pulse"></div>
           </div>
         </div>
       </div>

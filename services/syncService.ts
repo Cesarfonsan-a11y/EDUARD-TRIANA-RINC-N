@@ -2,27 +2,22 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// ID ÚNICO REGENERADO PARA EVITAR CONFLICTOS DE CACHÉ
-const CLOUD_OBJECT_ID = "ff808181932a975a019356ce083222f7"; 
-const STORAGE_NAME = "TRIANA_REALTIME_V5_STABLE";
+// NUEVO ID DE ALTA DISPONIBILIDAD PARA TRIANA 102
+const CLOUD_OBJECT_ID = "ff808181932a975a0193582f3299244c"; 
+const STORAGE_NAME = "TRIANA_LIVE_CONSOLIDATOR_V6";
 
 /**
- * Sincroniza y fusiona registros locales con los de la nube.
- * Implementa una unión de conjuntos basada en ID único para evitar pérdidas.
+ * Servicio de Sincronización Global
+ * Asegura que los datos de todos los recolectores se fusionen sin borrarse.
  */
 export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    // 1. Obtener estado actual de la nube
+    // 1. Intentar obtener los datos actuales del servidor
     const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`);
     
-    let cloudRecords: VoteRecord[] = [];
-    
-    if (response.ok) {
-      const cloudData = await response.json();
-      cloudRecords = Array.isArray(cloudData.data?.records) ? cloudData.data.records : [];
-    } else if (response.status === 404) {
-      // Si no existe el objeto, lo creamos con lo que tengamos localmente
-      if (localRecords.length > 0) {
+    if (!response.ok) {
+      // Si el objeto no existe (404), intentamos crearlo
+      if (response.status === 404 && localRecords.length > 0) {
         await fetch(API_BASE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -32,43 +27,43 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
             data: { records: localRecords }
           })
         });
+        return localRecords;
       }
       return localRecords;
     }
 
-    // 2. LÓGICA DE FUSIÓN (Deduplicación por ID)
+    const cloudData = await response.json();
+    const cloudRecords: VoteRecord[] = Array.isArray(cloudData.data?.records) ? cloudData.data.records : [];
+
+    // 2. FUSIÓN DETERMINISTA (Merge)
+    // Usamos un Map para asegurar que cada ID de registro sea único y no se repita
     const masterMap = new Map<string, VoteRecord>();
     
-    // Prioridad 1: Datos que ya están en la nube
-    cloudRecords.forEach(r => {
-      if (r && r.id) masterMap.set(r.id, r);
-    });
+    // Primero cargamos lo que está en la nube
+    cloudRecords.forEach(r => { if (r?.id) masterMap.set(r.id, r); });
     
-    // Prioridad 2: Datos nuevos locales
-    localRecords.forEach(r => {
-      if (r && r.id) masterMap.set(r.id, r);
-    });
+    // Luego sobreponemos lo local (por si hay nuevos)
+    localRecords.forEach(r => { if (r?.id) masterMap.set(r.id, r); });
 
-    const mergedRecords = Array.from(masterMap.values())
+    const merged = Array.from(masterMap.values())
       .sort((a, b) => b.timestamp - a.timestamp);
 
-    // 3. ACTUALIZACIÓN SI HAY DIFERENCIAS
-    // Solo subimos si nuestra fusión tiene más datos de los que la nube reportó inicialmente
-    if (mergedRecords.length > cloudRecords.length) {
+    // 3. ACTUALIZACIÓN PROACTIVA
+    // Si la fusión tiene más datos de los que había en la nube, actualizamos el servidor
+    if (merged.length > cloudRecords.length) {
       await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: STORAGE_NAME,
-          data: { records: mergedRecords }
+          data: { records: merged }
         })
       });
-      console.log(`✅ Sincronización Exitosa: ${mergedRecords.length} registros totales.`);
     }
 
-    return mergedRecords;
+    return merged;
   } catch (error) {
-    console.error("⚠️ Error de Red (Trabajando en Local):", error);
+    console.warn("⚠️ Fallo de conexión cloud - Operando en modo local");
     return localRecords;
   }
 };
