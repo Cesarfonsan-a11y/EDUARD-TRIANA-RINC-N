@@ -24,11 +24,10 @@ const App: React.FC = () => {
   const [selectedActor, setSelectedActor] = useState<ActorNode | null>(null);
   const [viewMode, setViewMode] = useState<'network' | 'participation' | 'database'>('network');
   const [lastRecord, setLastRecord] = useState<VoteRecord | null>(null);
+  const [currentVoterNumber, setCurrentVoterNumber] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [isAnimatingLogo, setIsAnimatingLogo] = useState(false);
-  // Fix: Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout to resolve "Cannot find namespace 'NodeJS'" error in browser environments.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [isCollectorViewActive, setIsCollectorViewActive] = useState(() => {
@@ -51,7 +50,7 @@ const App: React.FC = () => {
       setIsSyncing(true);
       try {
         const synced = await syncWithCloud(voteRecords);
-        if (synced && synced.length !== voteRecords.length) {
+        if (synced && Array.isArray(synced)) {
           setVoteRecords(synced);
         }
       } catch (e) {
@@ -64,7 +63,7 @@ const App: React.FC = () => {
     performSync();
     const interval = setInterval(performSync, 15000);
     return () => clearInterval(interval);
-  }, [voteRecords.length]);
+  }, []);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
     const newRecord: VoteRecord = {
@@ -72,6 +71,10 @@ const App: React.FC = () => {
       id: generateSafeId(),
       timestamp: Date.now()
     };
+    
+    // Calculamos el nuevo total antes de actualizar el estado para pasarlo al modal
+    const nextCount = voteRecords.length + 1;
+    setCurrentVoterNumber(nextCount);
     
     const updated = [newRecord, ...voteRecords];
     setVoteRecords(updated);
@@ -114,7 +117,7 @@ const App: React.FC = () => {
           <ThankYouModal 
             voterName={lastRecord.voterName} 
             actorId={lastRecord.actorId}
-            voterCount={voteRecords.length}
+            voterCount={currentVoterNumber}
             phoneNumber={lastRecord.phoneNumber}
             onClose={() => setLastRecord(null)} 
           />
@@ -122,10 +125,13 @@ const App: React.FC = () => {
 
         <div className="max-w-md w-full px-6 pt-8 pb-20 space-y-8">
           <header className="text-center space-y-4">
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
                <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-lg border border-white/10 animate-pulse">
                   <i className="fa-solid fa-satellite-dish"></i>
                   CAPTACIÓN ACTIVA
+               </div>
+               <div className="bg-blue-900/50 px-3 py-1 rounded-lg border border-blue-500/30">
+                  <span className="text-sky-400 font-black text-[10px] uppercase">Registrados: {voteRecords.length}</span>
                </div>
             </div>
             
@@ -134,9 +140,9 @@ const App: React.FC = () => {
               onClick={handleLogoTap}
             >
               <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
-                TRIANA <span className={`non-italic transition-colors ${tapCount > 0 ? 'text-amber-400' : 'text-[#facc15]'}`}>102</span>
+                TRIANA <span className="text-[#facc15] font-black">102</span>
               </h1>
-              <div className={`h-1 mx-auto rounded-full mt-2 transition-all ${tapCount > 0 ? 'w-24 bg-amber-400' : 'w-12 bg-slate-800'}`}></div>
+              <div className="h-1 mx-auto rounded-full mt-2 w-12 bg-slate-800"></div>
             </div>
           </header>
 
@@ -165,7 +171,7 @@ const App: React.FC = () => {
         <ThankYouModal 
           voterName={lastRecord.voterName} 
           actorId={lastRecord.actorId}
-          voterCount={voteRecords.length}
+          voterCount={currentVoterNumber}
           phoneNumber={lastRecord.phoneNumber}
           onClose={() => setLastRecord(null)} 
         />
@@ -233,7 +239,7 @@ const App: React.FC = () => {
       </div>
 
       <footer className="pt-10 pb-6 text-center opacity-20">
-        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Control Estratégico Boyacá • v1.5</p>
+        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Control Estratégico Boyacá • v1.6</p>
       </footer>
     </div>
   );
