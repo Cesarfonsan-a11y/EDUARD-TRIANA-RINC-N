@@ -30,6 +30,14 @@ const App: React.FC = () => {
   const [isAnimatingLogo, setIsAnimatingLogo] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  // Referencia para que el intervalo de sincronización siempre tenga los datos más recientes
+  const recordsRef = useRef<VoteRecord[]>(voteRecords);
+
+  useEffect(() => {
+    recordsRef.current = voteRecords;
+    localStorage.setItem('paipa_102_v13_db', JSON.stringify(voteRecords));
+  }, [voteRecords]);
+
   const [isCollectorViewActive, setIsCollectorViewActive] = useState(() => {
     const isParam = window.location.search.includes('mode=recolector') || window.location.hash.includes('mode=recolector');
     const isSaved = localStorage.getItem('v102_collector_active') === 'true';
@@ -37,31 +45,34 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    localStorage.setItem('paipa_102_v13_db', JSON.stringify(voteRecords));
-  }, [voteRecords]);
-
-  useEffect(() => {
     localStorage.setItem('v102_collector_active', isCollectorViewActive.toString());
   }, [isCollectorViewActive]);
 
+  // Efecto de sincronización mejorado para evitar cierres obsoletos
   useEffect(() => {
     const performSync = async () => {
       if (isSyncing) return;
       setIsSyncing(true);
       try {
-        const synced = await syncWithCloud(voteRecords);
-        if (synced && Array.isArray(synced)) {
+        const currentLocal = recordsRef.current;
+        const synced = await syncWithCloud(currentLocal);
+        
+        // Solo actualizamos el estado si la nube tiene más datos o son diferentes
+        if (synced && Array.isArray(synced) && synced.length !== currentLocal.length) {
           setVoteRecords(synced);
         }
       } catch (e) {
         console.warn("Sync deferred");
       } finally {
-        setTimeout(() => setIsSyncing(false), 3000);
+        setTimeout(() => setIsSyncing(false), 2000);
       }
     };
 
+    // Sincronización inicial rápida
     performSync();
-    const interval = setInterval(performSync, 15000);
+
+    // Sincronización periódica cada 10 segundos
+    const interval = setInterval(performSync, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -72,14 +83,20 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
-    // Calculamos el nuevo total antes de actualizar el estado para pasarlo al modal
+    // Calculamos el nuevo total inmediato para el carnet
     const nextCount = voteRecords.length + 1;
     setCurrentVoterNumber(nextCount);
     
     const updated = [newRecord, ...voteRecords];
     setVoteRecords(updated);
     setLastRecord(newRecord); 
-    syncWithCloud(updated).catch(() => {});
+    
+    // Forzamos sincronización inmediata tras guardar
+    syncWithCloud(updated).then(synced => {
+      if (synced && synced.length !== updated.length) {
+        setVoteRecords(synced);
+      }
+    }).catch(() => {});
   };
 
   const handleAdminAccess = useCallback(() => {
@@ -130,8 +147,9 @@ const App: React.FC = () => {
                   <i className="fa-solid fa-satellite-dish"></i>
                   CAPTACIÓN ACTIVA
                </div>
-               <div className="bg-blue-900/50 px-3 py-1 rounded-lg border border-blue-500/30">
-                  <span className="text-sky-400 font-black text-[10px] uppercase">Registrados: {voteRecords.length}</span>
+               <div className="bg-blue-900/50 px-3 py-1 rounded-lg border border-blue-500/30 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-ping"></span>
+                  <span className="text-sky-400 font-black text-[10px] uppercase">MIS REGISTROS: {voteRecords.length}</span>
                </div>
             </div>
             
@@ -158,7 +176,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="text-center opacity-30">
-            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Paipa, Boyacá • Red Triana 102</p>
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Paipa, Boyacá • Red Triana 102 • v1.7</p>
           </div>
         </div>
       </div>
@@ -230,16 +248,16 @@ const App: React.FC = () => {
         <aside className="space-y-8">
           <AnalysisPanel selectedActor={selectedActor} />
           <div className="bg-slate-900/60 p-8 rounded-[2.5rem] border border-slate-800 text-center space-y-6 backdrop-blur-xl">
-            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 ${isSyncing ? 'border-amber-500' : 'border-emerald-500'} bg-white/5`}>
+            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 ${isSyncing ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-emerald-500'} bg-white/5`}>
                <i className={`fa-solid ${isSyncing ? 'fa-sync fa-spin' : 'fa-check'} text-2xl ${isSyncing ? 'text-amber-400' : 'text-emerald-400'}`}></i>
             </div>
-            <h4 className="text-white font-black uppercase text-[10px] tracking-[0.2em]">Sincronización Activa</h4>
+            <h4 className="text-white font-black uppercase text-[10px] tracking-[0.2em]">{isSyncing ? 'Actualizando Base...' : 'Sincronizado'}</h4>
           </div>
         </aside>
       </div>
 
       <footer className="pt-10 pb-6 text-center opacity-20">
-        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Control Estratégico Boyacá • v1.6</p>
+        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Control Estratégico Boyacá • v1.7 • Multi-User Sync</p>
       </footer>
     </div>
   );

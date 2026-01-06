@@ -2,53 +2,53 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// ID único para la campaña de Eduar Triana en Paipa
-const STORAGE_ID = "paipa_triana_v14_live"; 
+// ID fijo para esta campaña. Esto asegura que todos los recolectores apunten a la misma base.
+// Nota: En producción real, este ID se generaría una vez y se guardaría en una base de datos.
+const CLOUD_OBJECT_ID = "ff808181932a975a0193437299a41630"; 
+const STORAGE_KEY = "paipa_triana_v16_live";
 
 export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    const response = await fetch(API_BASE);
-    if (!response.ok) throw new Error("API Offline");
+    // 1. Intentamos obtener la base consolidada de la nube
+    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`);
     
-    const allObjects = await response.json();
-    const existing = Array.isArray(allObjects) 
-      ? allObjects.find((o: any) => o.name === STORAGE_ID)
-      : null;
-
-    if (!existing) {
-      if (localRecords.length === 0) return [];
-      
-      const createRes = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: STORAGE_ID,
-          data: { records: localRecords }
-        })
-      });
-      const created = await createRes.json();
-      return created.data?.records || localRecords;
+    if (!response.ok) {
+      // Si el objeto no existe (404), intentamos crearlo con los datos locales
+      if (response.status === 404 && localRecords.length > 0) {
+        await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: CLOUD_OBJECT_ID,
+            name: STORAGE_KEY,
+            data: { records: localRecords }
+          })
+        });
+      }
+      return localRecords;
     }
 
-    const cloudRecords: VoteRecord[] = existing.data?.records || [];
+    const cloudData = await response.json();
+    const cloudRecords: VoteRecord[] = cloudData.data?.records || [];
     
-    // Diccionario para evitar duplicados por ID
+    // 2. Lógica de Fusión (Merge): Evitamos duplicados y sumamos todo
     const map = new Map<string, VoteRecord>();
     
-    // Importante: La nube manda sobre la base local para que el administrador
-    // reciba lo que los recolectores están subiendo.
+    // Primero agregamos lo de la nube
     cloudRecords.forEach(r => map.set(r.id, r));
+    // Luego agregamos lo local (si hay conflicto de ID, lo local podría ser más reciente, 
+    // pero usualmente los IDs generados por tiempo son únicos)
     localRecords.forEach(r => map.set(r.id, r));
 
     const merged = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
 
-    // Si hay datos nuevos (ya sea locales o de otros dispositivos), actualizamos la nube
-    if (merged.length > cloudRecords.length || merged.length > localRecords.length) {
-      await fetch(`${API_BASE}/${existing.id}`, {
+    // 3. Si hay datos nuevos después de la fusión, actualizamos la nube para que otros los vean
+    if (merged.length > cloudRecords.length) {
+      await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: STORAGE_ID,
+          name: STORAGE_KEY,
           data: { records: merged }
         })
       });
@@ -56,7 +56,7 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
 
     return merged;
   } catch (error) {
-    console.warn("Sync Mode: Local Recovery", error);
+    console.error("Error en sincronización:", error);
     return localRecords;
   }
 };
