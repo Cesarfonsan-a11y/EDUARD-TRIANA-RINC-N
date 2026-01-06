@@ -22,7 +22,10 @@ const App: React.FC = () => {
   const [lastRecord, setLastRecord] = useState<VoteRecord | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasNewActivity, setHasNewActivity] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPasscode, setAdminPasscode] = useState('');
   
+  // Ref para tener acceso al estado más actual dentro de callbacks asíncronos
   const recordsRef = useRef<VoteRecord[]>(voteRecords);
 
   useEffect(() => {
@@ -39,30 +42,41 @@ const App: React.FC = () => {
   }, [isCollectorViewActive]);
 
   const performGlobalSync = useCallback(async (manualData?: VoteRecord[]) => {
+    // Si ya estamos sincronizando y no es un push manual, esperamos.
     if (isSyncing && !manualData) return;
     
     setIsSyncing(true);
     try {
-      const dataToSync = manualData || recordsRef.current;
-      const globalData = await syncWithCloud(dataToSync);
+      // Priorizamos manualData (nuevo voto) o usamos lo que hay en el Ref
+      const currentLocalData = manualData || recordsRef.current;
+      const globalData = await syncWithCloud(currentLocalData);
       
-      if (globalData && globalData.length !== recordsRef.current.length) {
-        setVoteRecords(globalData);
-        setHasNewActivity(true);
-        setTimeout(() => setHasNewActivity(false), 3000);
+      if (globalData && globalData.length > 0) {
+        // REGLA DE ORO: Solo actualizamos si la nube trae MAS registros o registros DIFERENTES.
+        // Nunca permitimos que el contador baje si globalData.length < recordsRef.current.length
+        if (globalData.length > recordsRef.current.length) {
+          setVoteRecords(globalData);
+          setHasNewActivity(true);
+          setTimeout(() => setHasNewActivity(false), 3000);
+        } else if (manualData) {
+          // Si es un push manual, forzamos el estado local para asegurar que se vea el cambio
+          setVoteRecords(manualData);
+        }
       }
     } catch (e) {
-      console.error("Sync error");
+      console.error("Sync error:", e);
     } finally {
       setIsSyncing(false);
     }
   }, [isSyncing]);
 
+  // Polling de seguridad cada 5 segundos para no saturar y permitir que el PUT termine
   useEffect(() => {
-    performGlobalSync();
-    const timer = setInterval(() => performGlobalSync(), 3000);
+    const timer = setInterval(() => {
+      if (!isSyncing) performGlobalSync();
+    }, 5000);
     return () => clearInterval(timer);
-  }, [performGlobalSync]);
+  }, [performGlobalSync, isSyncing]);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
@@ -76,17 +90,61 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
+    // Actualización optimista inmediata
     const nextList = [newEntry, ...voteRecords];
     setVoteRecords(nextList);
     setLastRecord(newEntry);
     
-    // Push inmediato
+    // Push forzado a la nube
     await performGlobalSync(nextList);
+  };
+
+  const handleAdminAuth = (val: string) => {
+    const newPass = adminPasscode + val;
+    setAdminPasscode(newPass);
+    if (newPass === "102") {
+      setIsCollectorViewActive(false);
+      setShowAdminLogin(false);
+      setAdminPasscode('');
+    } else if (newPass.length >= 3) {
+      setAdminPasscode('');
+    }
   };
 
   if (isCollectorViewActive) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center animate-in fade-in duration-500 pb-20 overflow-x-hidden">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center animate-in fade-in duration-500 pb-20 overflow-x-hidden relative">
+        <button 
+          onClick={() => setShowAdminLogin(true)}
+          className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center text-slate-800 hover:text-amber-400 transition-colors z-[100]"
+        >
+          <i className="fa-solid fa-shield-halved text-xl"></i>
+        </button>
+
+        {showAdminLogin && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-2xl animate-in zoom-in-95 duration-200">
+             <div className="bg-slate-900 border-2 border-amber-400/30 rounded-[3rem] p-10 w-full max-w-xs shadow-[0_0_100px_rgba(0,0,0,0.8)] text-center space-y-8">
+                <div className="space-y-2">
+                   <div className="w-16 h-16 bg-blue-900/30 rounded-full mx-auto flex items-center justify-center border border-amber-400/20">
+                      <i className="fa-solid fa-lock text-amber-400 text-2xl"></i>
+                   </div>
+                   <h3 className="text-white font-black uppercase text-xs tracking-[0.3em]">Acceso Panel Maestro</h3>
+                </div>
+                <div className="flex justify-center gap-3">
+                   {[0, 1, 2].map(i => (
+                     <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${adminPasscode.length > i ? 'bg-amber-400 border-amber-400 scale-125' : 'border-slate-700'}`}></div>
+                   ))}
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(n => (
+                     <button key={n} onClick={() => handleAdminAuth(n.toString())} className="w-full aspect-square bg-slate-800 rounded-2xl flex items-center justify-center text-xl font-black text-white hover:bg-blue-900 active:scale-90 transition-all border border-white/5 shadow-lg">{n}</button>
+                   ))}
+                   <button onClick={() => { setShowAdminLogin(false); setAdminPasscode(''); }} className="col-span-2 bg-red-950/50 text-red-400 font-black text-[10px] uppercase rounded-2xl">CANCELAR</button>
+                </div>
+             </div>
+          </div>
+        )}
+
         {lastRecord && (
           <ThankYouModal 
             voterName={lastRecord.voterName} 
@@ -124,15 +182,10 @@ const App: React.FC = () => {
             />
           </div>
           
-          <button 
-            onClick={() => {
-              const code = prompt("MODO ADMIN:");
-              if(code === "102") setIsCollectorViewActive(false);
-            }}
-            className="w-full text-slate-700 py-4 text-[9px] font-black uppercase tracking-[0.4em]"
-          >
-            Sincronización Cloud Activa
-          </button>
+          <div className="text-center space-y-1">
+            <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Central de Inteligencia Paipa</p>
+            <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Fuerza Triana 102 • Cloud Sync</p>
+          </div>
         </div>
       </div>
     );
@@ -140,7 +193,6 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700 pb-24">
-      {/* HEADER REDISEÑADO PARA MOBILE */}
       <header className="bg-white rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-slate-100 flex flex-col md:flex-row min-h-[220px] md:min-h-[350px] relative">
         <div className="md:w-[35%] bg-amber-400 flex items-center justify-center p-6 md:p-12 text-center relative overflow-hidden">
            <div className="absolute inset-0 opacity-[0.05] flex items-center justify-center rotate-12 pointer-events-none scale-150">
@@ -160,7 +212,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* BOTÓN FLOTANTE DE REGISTRO (SIEMPRE VISIBLE EN CELULAR) */}
       <button 
         onClick={() => setIsCollectorViewActive(true)}
         className="fixed bottom-6 right-6 z-[100] bg-blue-950 text-white w-16 h-16 md:w-24 md:h-24 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center border-b-4 border-amber-500 hover:scale-110 active:scale-95 transition-all group"
@@ -185,12 +236,10 @@ const App: React.FC = () => {
                 <DatabaseView records={voteRecords} actors={ACTORS} onDeleteRecord={id => setVoteRecords(prev => prev.filter(v => v.id !== id))} />}
             </div>
           </div>
-          
           <div className="hidden md:block">
             <VoteRegistry actors={ACTORS} records={voteRecords} onAddRecord={handleAddVoteRecord} onDeleteRecord={id => setVoteRecords(prev => prev.filter(v => v.id !== id))} />
           </div>
         </div>
-        
         <aside className="space-y-8">
           <AnalysisPanel selectedActor={selectedActor} />
           <div className="bg-slate-900/60 p-10 rounded-[2.5rem] border border-slate-800 text-center space-y-6 shadow-2xl relative overflow-hidden">

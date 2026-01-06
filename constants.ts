@@ -3,84 +3,84 @@ import { ActorNode, RelationLink } from './types';
 
 export const SECTOR_MESSAGES: Record<string, string[]> = {
   mineros: [
-    "¡Qué orgullo contar con un trabajador de la tierra! Eres la fuerza que brota del suelo para iluminar a todo Boyacá. ¡Gracias por tu valentía y compromiso!",
-    "Tu labor es el motor de nuestra historia. Cada vez que entras a la mina, llevas contigo la esperanza de miles. ¡Bienvenido a este equipo que te valora!",
-    "Eres el corazón de nuestra economía. Gracias por ponerle el pecho al progreso de Paipa con tanta dedicación."
+    "Usted extrae el alma de la tierra para encender la luz de la nación. Su valentía en la profundidad es el faro indomable del progreso de Boyacá.",
+    "Cada gota de sudor en el socavón es una semilla de libertad. Usted es el gigante que domina la montaña y forja el futuro con sus manos.",
+    "Bajo la tierra se forja el carácter de los valientes. Su fuerza es el latido de un pueblo que no se rinde ante la oscuridad."
   ],
   madereros: [
-    "Eres el cimiento sobre el cual construimos el futuro. Tu trabajo con la madera es la estructura que sostiene los sueños de nuestra región. ¡Bienvenido!",
-    "Con tus manos se construye el progreso. Gracias por ser esa pieza fundamental que protege y fortalece nuestro ecosistema productivo.",
-    "La madera de Paipa tiene tu sello de calidad. Gracias por confiar en nosotros para construir juntos un Boyacá más fuerte."
+    "Usted sostiene los techos de quienes sueñan. Su madera es la columna vertebral de nuestra industria y el escudo de nuestros mineros.",
+    "Con nobleza y fuerza, usted construye el soporte de nuestra economía. Sus manos son las raíces que mantienen a Paipa firme ante todo.",
+    "Arquitecto de la seguridad: gracias por trabajar con la piel de la tierra para protegernos a todos. ¡Usted es indispensable!"
   ],
   combustibles: [
-    "Tú eres la chispa que mantiene a Paipa en movimiento. Gracias por ser la energía inagotable que impulsa cada vehículo y cada sueño en el territorio.",
-    "Sin tu labor, el progreso se detendría. Gracias por ser el combustible de nuestra esperanza y el aliado estratégico de cada trabajador.",
-    "Energía pura para nuestra gente. Tu servicio es vital para que Boyacá no deje de avanzar."
+    "Usted es la chispa que rompe el silencio del camino. Sin su energía, Boyacá se detendría; gracias por ser el latido incesante del progreso.",
+    "En cada galón hay una promesa de llegada. Usted es el aliado de cada sueño que viaja por nuestras carreteras. ¡Paipa avanza por usted!",
+    "Energía inagotable para un pueblo guerrero. Su labor es el combustible que alimenta la victoria que estamos construyendo juntos."
   ],
   supermercados: [
-    "Más que abastecer, tú cuidas a las familias de nuestro pueblo. Eres ese punto de encuentro donde nace el bienestar de Paipa. ¡Gracias por sumarte!",
-    "Gracias por alimentar los sueños de nuestra comunidad. Tu negocio es el reflejo del esfuerzo y la abundancia de nuestra tierra.",
-    "Comercio con corazón. Eres quien garantiza que a ninguna mesa le falte el sustento. ¡Tu apoyo nos llena de fuerza!"
+    "Usted es el guardián del sustento, garantizando que en la mesa de Boyacá nunca falte la bendición. Su comercio es el altar de la comunidad.",
+    "Motor que abastece la esperanza. En cada estante se refleja el esfuerzo de un pueblo que progresa con calidad y honradez absoluta.",
+    "Su negocio es el refugio de las familias. Gracias por ser el eslabón de oro que une la abundancia con el hogar paipano."
   ],
   tenderos: [
-    "Eres el alma del barrio, ese amigo que siempre está cuando alguien lo necesita. Tu confianza es el tesoro más grande de este equipo.",
-    "La tienda de la esquina es el corazón de nuestra economía cercana. Gracias por ser el vecino que siempre nos da una mano.",
-    "Paso a paso, cliente a cliente, construyes país. ¡Bienvenido al equipo donde tu voz y tu negocio son nuestra prioridad!"
+    "Paso a paso, cliente a cliente, usted construye país. Es el confesor, el amigo y el corazón que late en cada esquina de nuestros barrios.",
+    "La tienda es el primer peldaño de la libertad. Gracias por ser ese vecino que nunca cierra la puerta a la necesidad de su gente.",
+    "Usted sostiene la economía popular con la fuerza de su palabra. ¡Bienvenido al equipo que valora su liderazgo social!"
   ],
   ingenieros: [
-    "¡Mente brillante y transformadora! Tu ingeniería es la que diseña el Boyacá del futuro. Gracias por poner tu técnica al servicio de este proyecto.",
-    "Precisión y visión: eso es lo que aportas a nuestro equipo. Juntos construiremos las obras que Paipa necesita.",
-    "La infraestructura de nuestra esperanza pasa por tus cálculos. ¡Bienvenido al equipo técnico de la victoria!"
+    "Su mente es el plano del futuro. Gracias por poner la ciencia al servicio del desarrollo de nuestra amada y eterna Boyacá.",
+    "Precisión y visión: usted diseña realidades donde otros ven imposibles. Juntos levantaremos las obras que nuestra historia reclama.",
+    "Donde hay problemas, usted construye soluciones. Su intelecto es la herramienta más poderosa para transformar el destino de Paipa."
   ],
   arquitectos: [
-    "Diseñando espacios para la vida y el progreso. Tu visión estética y funcional es clave para modernizar nuestro territorio.",
-    "Arquitecto de sueños boyacenses. Gracias por creer en una Paipa planeada y sostenible.",
-    "Con tu talento, dibujamos el mapa de un departamento más fuerte. ¡Tu respaldo nos da altura!"
+    "Usted diseña la identidad de nuestro territorio. Su visión estética es la que moderniza el alma de nuestra cultura y progreso.",
+    "Arquitecto de sueños: gracias por proyectar una tierra donde la estética y la grandeza caminan de la mano hacia la victoria.",
+    "Con su talento, cada espacio se convierte en un monumento al progreso. Su respaldo es la base sólida de nuestra planificación."
   ],
   veterinarios: [
-    "Protector de nuestra riqueza animal y aliado del campo. Tu labor garantiza la salud de nuestra vocación agropecuaria.",
-    "Gracias por cuidar de quienes no tienen voz pero son el sustento de miles de familias. ¡Bienvenido, doctor!",
-    "Pasión por la vida y el campo. Tu conocimiento es vital para que nuestra Paipa rural sea ejemplo nacional."
+    "Ángel guardián de nuestra riqueza pecuaria. Su vocación protege el sustento de los campesinos que son la raíz de nuestra patria.",
+    "Sanar la tierra a través de sus animales es su misión noble. Usted es el soporte técnico que garantiza la vida en nuestro campo.",
+    "Su conocimiento es el escudo de nuestra soberanía alimentaria. Gracias por cuidar de quienes nos alimentan con amor y dedicación."
   ],
   agronomos: [
-    "Haciendo que la tierra produzca con ciencia y corazón. Eres el mejor aliado de nuestros campesinos.",
-    "Sembrando futuro con técnica y dedicación. Gracias por ser el motor de la productividad en Boyacá.",
-    "Tu conocimiento técnico es la semilla de la prosperidad que estamos cultivando. ¡Paipa florece con tu apoyo!"
+    "Usted hace hablar a la tierra. Su técnica es el milagro que convierte el campo en una despensa de prosperidad infinita para todos.",
+    "Sembrador de ciencia en el surco de la esperanza. Usted es el guía que lleva a nuestros campesinos hacia la competitividad global.",
+    "La tierra de Boyacá florece bajo su mando. Su sabiduría es la semilla que garantiza un futuro siempre verde y fértil para Paipa."
   ],
   transportadores: [
-    "¡Gigante de las vías! Tu labor conectando a Paipa con el país es la que mantiene viva nuestra economía. ¡Gracias por tu fuerza!",
-    "Kilómetro a kilómetro, construyes la grandeza de Boyacá. Tu camión es el pulso del progreso nacional.",
-    "Firme al volante y de gran corazón. Tu gremio es la columna vertebral de nuestra competitividad territorial."
+    "¡Gigante de las rutas! Cada kilómetro es una arteria que lleva la vida de Paipa al corazón de Colombia. Usted es el dueño de la distancia.",
+    "Sobre sus hombros descansa el movimiento de la nación. Su camión es un barco de tierra que navega con el orgullo de ser boyacense.",
+    "Firme al volante, protegiendo la carga y la esperanza. Usted es la columna vertebral que conecta nuestros sueños con el mundo."
   ],
   taxistas: [
-    "¡Amigo del volante! Tú conoces cada rincón de Paipa y eres la cara amable para nuestra gente y turistas. ¡Bienvenido!",
-    "Eres el pulso de la ciudad. Gracias por mover a nuestra comunidad con seguridad y compromiso diario.",
-    "Nadie conoce mejor las necesidades del pueblo que tú. Tu voz es fundamental para este proyecto de transformación."
+    "Embajador de nuestras calles y primer saludo del visitante. Su taxi es el pulso de la ciudad y el oído de nuestro pueblo.",
+    "Nadie conoce mejor el corazón de Paipa que usted. Gracias por mover a nuestra gente con la dignidad que este pueblo merece.",
+    "Usted es el líder que escucha el clamor de la gente. Su voz es la verdad que necesitamos para transformar nuestro territorio hoy mismo."
   ],
   ferreterias: [
-    "¡Cimiento del progreso! Tu negocio provee las herramientas con las que Paipa se levanta y se fortalece cada día.",
-    "En cada clavo y cada viga, está tu aporte al crecimiento de nuestro territorio. ¡Gracias por ser soporte técnico!",
-    "Socio estratégico del desarrollo. Tu ferretería es el punto de partida de toda gran obra en Boyacá."
+    "En cada herramienta entrega la posibilidad de un nuevo futuro. Su negocio es el arsenal del desarrollo y la construcción de Paipa.",
+    "Cimientos fuertes para una Boyacá que se levanta. Gracias por proveer el hierro con el que forjamos nuestra independencia económica.",
+    "Aliado estratégico de todo el que quiere mejorar su vida. Su ferretería es el punto de partida de toda gran victoria regional."
   ],
   carnicos: [
-    "¡Maestro del sabor y la calidad! Tu labor garantiza que lo mejor de nuestra ganadería llegue con excelencia a la mesa.",
-    "Orgullo de nuestra tradición cárnica. Gracias por tu esfuerzo diario manteniendo la soberanía alimentaria de Paipa.",
-    "Calidad y servicio boyacense. Eres un eslabón crítico en la cadena de bienestar de nuestras familias."
+    "Maestro de la tradición que nutre a nuestro pueblo. Su labor garantiza salud y fuerza para las familias que son el motor de Boyacá.",
+    "Orgullo de nuestra ganadería en sus manos. Gracias por honrar la mesa de Paipa con el fruto de nuestro bendito esfuerzo campesino.",
+    "Calidad que se siente, servicio que enamora. Usted es el eslabón de oro en la cadena del bienestar y la nutrición de nuestra gente."
   ],
   belleza: [
-    "¡Embajadora de la confianza! Tu talento resalta la belleza de nuestra gente y tu salón es el corazón de la comunidad. ¡Bienvenida!",
-    "Eres quien escucha y cuida a los vecinos cada día. Gracias por ser esa líder de opinión que Paipa necesita.",
-    "Transformas vidas con tus manos. Gracias por sumar tu brillo y tu respaldo a este proyecto de victoria."
+    "Usted eleva el espíritu y la confianza de nuestra gente. Su salón es el santuario donde nace la seguridad y la luz personal.",
+    "Líder de opinión y guardiana de la comunidad: su influencia es el tejido social que nos mantiene unidos. ¡Gracias por su luz!",
+    "En sus manos la belleza se convierte en arte y el servicio en amistad. Gracias por embellecer el camino hacia la victoria final."
   ],
   empresarios: [
-    "Visionario del desarrollo. Tu capacidad de generar empleo es el motor que mantiene fuerte a nuestra Paipa. ¡Bienvenido!",
-    "Gracias por creer en el talento local y por invertir en nuestra tierra. Juntos garantizaremos un entorno seguro para tu empresa.",
-    "Tu liderazgo empresarial es clave para que Boyacá sea potencia comercial. ¡Tu apoyo nos da la firmeza necesaria!"
+    "Usted es el valiente que genera el empleo que dignifica al trabajador boyacense. Su liderazgo es la brújula de nuestro progreso.",
+    "Gracias por invertir sus sueños en Paipa. Juntos crearemos el entorno de seguridad y orden que su empresa necesita para vencer.",
+    "Visionario del desarrollo: su capacidad de gestión es el motor que nos sacará adelante. Su respaldo nos da la firmeza para ganar."
   ],
   sin_actividad: [
-    "¡Tu voz es nuestra mayor fuerza! Estamos aquí para trabajar por las oportunidades que tú y tu familia merecen en Paipa.",
-    "Gracias por confiar en nosotros. Este proyecto es para que ningún paipano se sienta solo en su búsqueda de progreso.",
-    "Tu respaldo nos motiva a construir una ciudad con más empleo y bienestar para todos. ¡Bienvenido al equipo!"
+    "Su fe es el motor que nos obliga a no descansar hasta que cada familia de Paipa tenga la oportunidad que siempre ha soñado.",
+    "Usted es la razón de nuestra lucha. Trabajaremos sin descanso para que su voz sea el norte absoluto de nuestro gobierno.",
+    "Gracias por confiar su esperanza en nuestras manos. Juntos construiremos una Boyacá donde el bienestar sea un derecho de todos."
   ]
 };
 
