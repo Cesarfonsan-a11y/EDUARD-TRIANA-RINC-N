@@ -28,15 +28,15 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
 
     const firstName = (voterName || 'AMIGO').split(' ')[0].toUpperCase();
     
-    // MENSAJE EXACTO SOLICITADO POR EL USUARIO
-    const wsText = `¡YA SOMOS ${voterCount}! 🇨🇴\n\n¡Hola ${firstName}!\n\nTe doy la bienvenida al equipo de la victoria. Aquí tienes tu carnet oficial.\n\nEduar Triana - Cámara 102 🦁\n#PorTiBoyacá`;
+    // MENSAJE ACTUALIZADO SEGÚN SOLICITUD
+    const wsText = `¡YA SOMOS ${voterCount}! 🇨🇴\n\n¡Hola ${firstName}!\n\nTe doy la bienvenida al equipo de Eduar Triana. Aquí tienes tu carnet oficial.\n\nEduar Triana - Cámara 102 🦁\n#PorTiBoyacá`;
     
     const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
     const finalPhone = cleanPhone.startsWith('57') ? cleanPhone : `57${cleanPhone}`;
     const waUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(wsText)}`;
 
     try {
-      // 1. Generar la imagen con alta calidad
+      // 1. Generar la imagen con alta calidad para descarga
       const canvas = await html2canvas(cardRef.current, {
         scale: 3,
         useCORS: true,
@@ -48,7 +48,7 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png', 0.9));
       if (!blob) throw new Error("No se pudo generar el carnet");
 
-      // 2. DESCARGAR EL CARNET (REQUERIMIENTO PRINCIPAL)
+      // 2. DESCARGAR EL CARNET AUTOMÁTICAMENTE
       const url = URL.createObjectURL(blob);
       const downloadLink = document.createElement('a');
       downloadLink.href = url;
@@ -57,7 +57,7 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
       downloadLink.click();
       document.body.removeChild(downloadLink);
 
-      // 3. INTENTAR COMPARTIR NATIVO (Imagen + Texto juntos si el móvil lo permite)
+      // 3. INTENTAR COMPARTIR NATIVO (Imagen + Texto si el móvil lo soporta)
       const file = new File([blob], `Carnet_102_${firstName}.png`, { type: 'image/png' });
       
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -70,11 +70,11 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
           setIsProcessing(false);
           return;
         } catch (e) {
-          console.log("Compartir nativo declinado, usando redirección manual");
+          console.log("Compartir nativo declinado");
         }
       }
 
-      // 4. FALLBACK: COPIAR AL PORTAPAPELES PARA FACILITAR EL PEGADO
+      // 4. COPIAR AL PORTAPAPELES (Fallback para agilizar el proceso)
       try {
         if (navigator.clipboard && window.ClipboardItem) {
           const data = [new ClipboardItem({ [blob.type]: blob })];
@@ -82,15 +82,15 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
           setShowCopyHint(true);
         }
       } catch (clipError) {
-        console.warn("No se pudo copiar al portapapeles");
+        console.warn("Portapapeles no disponible");
       }
 
       // 5. REDIRECCIÓN A WHATSAPP
-      // Pequeño retraso para que la descarga inicie correctamente
+      // Pequeño retraso para que la descarga se complete visualmente
       setTimeout(() => {
         window.open(waUrl, '_blank');
         setIsProcessing(false);
-      }, 800);
+      }, 1000);
 
     } catch (error) {
       console.error("Error en el proceso:", error);
@@ -107,14 +107,14 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
       {showCopyHint && (
         <div className="fixed top-8 left-0 right-0 z-[700] flex justify-center px-6 pointer-events-none animate-in slide-in-from-top duration-500">
            <div className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-white/20">
-              <i className="fa-solid fa-cloud-arrow-down"></i>
-              <p className="font-black text-[11px] uppercase tracking-wider italic">Carnet Descargado y Copiado. ¡Pégalo en WhatsApp!</p>
+              <i className="fa-solid fa-check-circle"></i>
+              <p className="font-black text-[11px] uppercase tracking-wider italic">¡Carnet Descargado! Pégalo ahora en WhatsApp</p>
            </div>
         </div>
       )}
 
       <div className="max-w-[360px] w-full flex flex-col items-center py-4">
-        {/* CARNET VISTA PREVIA */}
+        {/* VISTA PREVIA DEL CARNET */}
         <div 
           ref={cardRef} 
           className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#facc15] relative w-full flex flex-col min-h-[580px]"
@@ -132,7 +132,7 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
             <div className="w-14 h-14 bg-[#facc15] rounded-full mx-auto flex items-center justify-center border-2 border-white/20 mb-3">
               <i className="fa-solid fa-heart text-[#1e3a8a] text-2xl"></i>
             </div>
-            <h2 className="text-white font-black text-xl leading-none uppercase italic">¡QUÉ BUENO TENERTE!</h2>
+            <h2 className="text-white font-black text-xl leading-none uppercase italic">¡BIENVENIDO AL EQUIPO!</h2>
           </div>
 
           <div className="flex-1 px-4 py-4 flex flex-col items-center bg-white relative">
@@ -148,7 +148,7 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
                     <h4 className="text-[#1e3a8a] font-black text-3xl italic uppercase tracking-tighter">
                       "¡Hola, {voterName.split(' ')[0].toUpperCase()}!"
                     </h4>
-                    <p className="text-blue-900 font-black text-[10px] uppercase tracking-widest italic">BIENVENIDO AL EQUIPO</p>
+                    <p className="text-blue-900 font-black text-[10px] uppercase tracking-widest italic">ESTAMOS JUNTOS EN ESTO</p>
                   </div>
                   <p className="text-slate-900 font-extrabold italic text-[14px] leading-tight">"{personalizedMessage}"</p>
                 </div>
@@ -181,15 +181,15 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
               <i className={`fa-solid ${isProcessing ? 'fa-circle-notch fa-spin' : 'fa-whatsapp'} text-3xl`}></i>
               <div className="text-left">
                 <span className="text-xs uppercase font-black block leading-none">
-                  {isProcessing ? 'PREPARANDO...' : 'DESCARGAR Y ENVIAR'}
+                  {isProcessing ? 'DESCARGANDO...' : 'DESCARGAR Y ENVIAR'}
                 </span>
-                <span className="text-[8px] uppercase tracking-widest opacity-60 mt-1 block">Carnet + WhatsApp Directo</span>
+                <span className="text-[8px] uppercase tracking-widest opacity-60 mt-1 block">WhatsApp Directo</span>
               </div>
             </div>
           </button>
 
           <button onClick={onClose} className="w-full text-white/30 font-black py-2 text-[10px] uppercase tracking-[0.5em] hover:text-white transition-colors">
-            CERRAR VENTANA
+            REGRESAR
           </button>
         </div>
       </div>
