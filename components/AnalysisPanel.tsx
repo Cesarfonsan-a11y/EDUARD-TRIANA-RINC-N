@@ -28,13 +28,13 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
 
   return (
     <div className="space-y-6 h-full overflow-y-auto pr-2 custom-scrollbar">
-      <div className="bg-slate-900/80 p-6 rounded-xl border border-slate-800 shadow-xl shadow-black/20">
+      <div className="bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-xl shadow-black/20">
         {!selectedActor ? (
           <div className="text-slate-500 text-center py-12 italic flex flex-col items-center gap-4">
             <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center border border-slate-800">
               <i className="fa-solid fa-hand-pointer text-2xl opacity-20"></i>
             </div>
-            <p className="text-sm font-medium px-4">Seleccione un sector en el mapa para visualizar detalles estratégicos.</p>
+            <p className="text-sm font-medium px-4">Seleccione un sector para ver estrategia.</p>
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-right duration-500">
@@ -74,13 +74,13 @@ const AnalysisPanel: React.FC<Props> = ({ selectedActor }) => {
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div className="pt-6 border-t border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 Estado: Activo
               </div>
-              <div className="text-[10px] font-black text-amber-400 italic">
-                Triana #102
+              <div className="text-2xl font-black text-amber-400 italic tracking-tighter">
+                Triana <span className="text-white">#102</span>
               </div>
             </div>
           </div>
