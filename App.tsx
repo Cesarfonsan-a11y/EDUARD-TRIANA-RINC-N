@@ -30,7 +30,7 @@ const App: React.FC = () => {
   const [isAnimatingLogo, setIsAnimatingLogo] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Referencia para que el intervalo de sincronización siempre tenga los datos más recientes
+  // Referencia persistente para evitar cierres obsoletos en intervalos
   const recordsRef = useRef<VoteRecord[]>(voteRecords);
 
   useEffect(() => {
@@ -48,55 +48,63 @@ const App: React.FC = () => {
     localStorage.setItem('v102_collector_active', isCollectorViewActive.toString());
   }, [isCollectorViewActive]);
 
-  // Efecto de sincronización mejorado para evitar cierres obsoletos
+  // Loop de sincronización global
   useEffect(() => {
-    const performSync = async () => {
+    const syncLoop = async () => {
       if (isSyncing) return;
       setIsSyncing(true);
       try {
-        const currentLocal = recordsRef.current;
-        const synced = await syncWithCloud(currentLocal);
+        const localData = recordsRef.current;
+        const globalData = await syncWithCloud(localData);
         
-        // Solo actualizamos el estado si la nube tiene más datos o son diferentes
-        if (synced && Array.isArray(synced) && synced.length !== currentLocal.length) {
-          setVoteRecords(synced);
+        // Si el total de la nube es diferente al local, actualizamos la interfaz
+        if (globalData && globalData.length !== localData.length) {
+          setVoteRecords(globalData);
         }
       } catch (e) {
-        console.warn("Sync deferred");
+        console.warn("Reintentando sincronización...");
       } finally {
         setTimeout(() => setIsSyncing(false), 2000);
       }
     };
 
-    // Sincronización inicial rápida
-    performSync();
+    // Ejecución inmediata al cargar
+    syncLoop();
 
-    // Sincronización periódica cada 10 segundos
-    const interval = setInterval(performSync, 10000);
+    // Sincronización cada 8 segundos para mayor agilidad
+    const interval = setInterval(syncLoop, 8000);
     return () => clearInterval(interval);
   }, []);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
+    // Evitar duplicados por cédula localmente antes de intentar guardar
+    const isDuplicate = voteRecords.some(r => r.idNumber === record.idNumber);
+    if (isDuplicate) {
+      alert("⚠️ Esta cédula ya se encuentra registrada en el sistema.");
+      return;
+    }
+
     const newRecord: VoteRecord = {
       ...record,
       id: generateSafeId(),
       timestamp: Date.now()
     };
     
-    // Calculamos el nuevo total inmediato para el carnet
-    const nextCount = voteRecords.length + 1;
-    setCurrentVoterNumber(nextCount);
-    
+    // Actualización inmediata local
     const updated = [newRecord, ...voteRecords];
     setVoteRecords(updated);
-    setLastRecord(newRecord); 
+    setLastRecord(newRecord);
+    setCurrentVoterNumber(updated.length);
     
-    // Forzamos sincronización inmediata tras guardar
-    syncWithCloud(updated).then(synced => {
+    // Intento de subida inmediata
+    try {
+      const synced = await syncWithCloud(updated);
       if (synced && synced.length !== updated.length) {
         setVoteRecords(synced);
       }
-    }).catch(() => {});
+    } catch (e) {
+      console.warn("Registro guardado localmente. Se subirá al recuperar conexión.");
+    }
   };
 
   const handleAdminAccess = useCallback(() => {
@@ -147,9 +155,11 @@ const App: React.FC = () => {
                   <i className="fa-solid fa-satellite-dish"></i>
                   CAPTACIÓN ACTIVA
                </div>
-               <div className="bg-blue-900/50 px-3 py-1 rounded-lg border border-blue-500/30 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-ping"></span>
-                  <span className="text-sky-400 font-black text-[10px] uppercase">MIS REGISTROS: {voteRecords.length}</span>
+               <div className="bg-blue-900/50 px-4 py-1.5 rounded-xl border border-blue-500/30 flex items-center gap-3">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+                  <span className="text-white font-black text-xs uppercase tracking-tighter">
+                    GLOBAL: <span className="text-amber-400 text-lg ml-1">{voteRecords.length}</span>
+                  </span>
                </div>
             </div>
             
@@ -158,7 +168,7 @@ const App: React.FC = () => {
               onClick={handleLogoTap}
             >
               <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
-                TRIANA <span className="text-[#facc15] font-black">102</span>
+                TRIANA <span className="text-[#facc15]">102</span>
               </h1>
               <div className="h-1 mx-auto rounded-full mt-2 w-12 bg-slate-800"></div>
             </div>
@@ -175,8 +185,8 @@ const App: React.FC = () => {
             />
           </div>
 
-          <div className="text-center opacity-30">
-            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Paipa, Boyacá • Red Triana 102 • v1.7</p>
+          <div className="text-center opacity-30 mt-8">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Paipa, Boyacá • Red Estratégica 102 • v2.0</p>
           </div>
         </div>
       </div>
@@ -223,6 +233,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {/* ESTADÍSTICAS GLOBALES ACTUALIZADAS */}
       <ElectoralStats currentVotes={voteRecords.length} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -248,16 +259,16 @@ const App: React.FC = () => {
         <aside className="space-y-8">
           <AnalysisPanel selectedActor={selectedActor} />
           <div className="bg-slate-900/60 p-8 rounded-[2.5rem] border border-slate-800 text-center space-y-6 backdrop-blur-xl">
-            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 ${isSyncing ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-emerald-500'} bg-white/5`}>
+            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 ${isSyncing ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'border-emerald-500'} bg-white/5`}>
                <i className={`fa-solid ${isSyncing ? 'fa-sync fa-spin' : 'fa-check'} text-2xl ${isSyncing ? 'text-amber-400' : 'text-emerald-400'}`}></i>
             </div>
-            <h4 className="text-white font-black uppercase text-[10px] tracking-[0.2em]">{isSyncing ? 'Actualizando Base...' : 'Sincronizado'}</h4>
+            <h4 className="text-white font-black uppercase text-[10px] tracking-[0.2em]">{isSyncing ? 'Consolidando Red...' : 'Sistema Sincronizado'}</h4>
           </div>
         </aside>
       </div>
 
       <footer className="pt-10 pb-6 text-center opacity-20">
-        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Control Estratégico Boyacá • v1.7 • Multi-User Sync</p>
+        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Mano Firme por Boyacá • v2.0 • Sincronización Multi-Agente</p>
       </footer>
     </div>
   );
