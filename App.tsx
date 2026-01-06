@@ -25,7 +25,6 @@ const App: React.FC = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
   
-  // Ref para tener acceso al estado más actual dentro de callbacks asíncronos
   const recordsRef = useRef<VoteRecord[]>(voteRecords);
 
   useEffect(() => {
@@ -42,25 +41,22 @@ const App: React.FC = () => {
   }, [isCollectorViewActive]);
 
   const performGlobalSync = useCallback(async (manualData?: VoteRecord[]) => {
-    // Si ya estamos sincronizando y no es un push manual, esperamos.
     if (isSyncing && !manualData) return;
     
     setIsSyncing(true);
     try {
-      // Priorizamos manualData (nuevo voto) o usamos lo que hay en el Ref
       const currentLocalData = manualData || recordsRef.current;
       const globalData = await syncWithCloud(currentLocalData);
       
-      if (globalData && globalData.length > 0) {
-        // REGLA DE ORO: Solo actualizamos si la nube trae MAS registros o registros DIFERENTES.
-        // Nunca permitimos que el contador baje si globalData.length < recordsRef.current.length
-        if (globalData.length > recordsRef.current.length) {
+      if (globalData) {
+        // Actualizamos siempre que el conteo de la nube sea mayor o igual al local
+        // para asegurar que las nuevas entradas de otros dispositivos se reflejen.
+        if (globalData.length >= recordsRef.current.length) {
+          if (globalData.length > recordsRef.current.length) {
+            setHasNewActivity(true);
+            setTimeout(() => setHasNewActivity(false), 3000);
+          }
           setVoteRecords(globalData);
-          setHasNewActivity(true);
-          setTimeout(() => setHasNewActivity(false), 3000);
-        } else if (manualData) {
-          // Si es un push manual, forzamos el estado local para asegurar que se vea el cambio
-          setVoteRecords(manualData);
         }
       }
     } catch (e) {
@@ -70,15 +66,17 @@ const App: React.FC = () => {
     }
   }, [isSyncing]);
 
-  // Polling de seguridad cada 5 segundos para no saturar y permitir que el PUT termine
+  // Sincronización inicial y periódica
   useEffect(() => {
+    performGlobalSync();
     const timer = setInterval(() => {
-      if (!isSyncing) performGlobalSync();
-    }, 5000);
+      performGlobalSync();
+    }, 4000); // Polling más frecuente para tiempo real
     return () => clearInterval(timer);
-  }, [performGlobalSync, isSyncing]);
+  }, []);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
+    // Verificación local inmediata
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
       alert("⚠️ Esta cédula ya está registrada.");
       return;
@@ -90,12 +88,11 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
-    // Actualización optimista inmediata
     const nextList = [newEntry, ...voteRecords];
     setVoteRecords(nextList);
     setLastRecord(newEntry);
     
-    // Push forzado a la nube
+    // Forzamos la subida a la nube
     await performGlobalSync(nextList);
   };
 
@@ -175,7 +172,7 @@ const App: React.FC = () => {
             <div className="h-1.5 w-full bg-gradient-to-r from-blue-700 via-amber-400 to-blue-700"></div>
             <VoteRegistry 
               actors={ACTORS} 
-              records={[]} 
+              records={voteRecords} 
               onAddRecord={handleAddVoteRecord} 
               onDeleteRecord={() => {}} 
               isPublic={true} 
