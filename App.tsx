@@ -28,9 +28,9 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [isAnimatingLogo, setIsAnimatingLogo] = useState(false);
+  const [hasNewActivity, setHasNewActivity] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Referencia persistente para evitar cierres obsoletos en intervalos
   const recordsRef = useRef<VoteRecord[]>(voteRecords);
 
   useEffect(() => {
@@ -48,39 +48,37 @@ const App: React.FC = () => {
     localStorage.setItem('v102_collector_active', isCollectorViewActive.toString());
   }, [isCollectorViewActive]);
 
-  // Loop de sincronización global
+  // CICLO DE SINCRONIZACIÓN ULTRA-RÁPIDO (4 SEGUNDOS)
   useEffect(() => {
-    const syncLoop = async () => {
+    const syncProcess = async () => {
       if (isSyncing) return;
       setIsSyncing(true);
       try {
-        const localData = recordsRef.current;
-        const globalData = await syncWithCloud(localData);
+        const currentLocal = recordsRef.current;
+        const globalData = await syncWithCloud(currentLocal);
         
-        // Si el total de la nube es diferente al local, actualizamos la interfaz
-        if (globalData && globalData.length !== localData.length) {
+        if (globalData && globalData.length !== currentLocal.length) {
           setVoteRecords(globalData);
+          setHasNewActivity(true);
+          setTimeout(() => setHasNewActivity(false), 3000);
         }
       } catch (e) {
-        console.warn("Reintentando sincronización...");
+        console.warn("Falla de red. Reintentando...");
       } finally {
-        setTimeout(() => setIsSyncing(false), 2000);
+        setIsSyncing(false);
       }
     };
 
-    // Ejecución inmediata al cargar
-    syncLoop();
-
-    // Sincronización cada 8 segundos para mayor agilidad
-    const interval = setInterval(syncLoop, 8000);
+    syncProcess();
+    const interval = setInterval(syncProcess, 4000);
     return () => clearInterval(interval);
   }, []);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
-    // Evitar duplicados por cédula localmente antes de intentar guardar
+    // Verificación de duplicados global antes de guardar
     const isDuplicate = voteRecords.some(r => r.idNumber === record.idNumber);
     if (isDuplicate) {
-      alert("⚠️ Esta cédula ya se encuentra registrada en el sistema.");
+      alert("🛑 Cédula ya registrada en la Red 102.");
       return;
     }
 
@@ -90,25 +88,25 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
-    // Actualización inmediata local
+    // 1. Actualización visual instantánea
     const updated = [newRecord, ...voteRecords];
     setVoteRecords(updated);
     setLastRecord(newRecord);
     setCurrentVoterNumber(updated.length);
     
-    // Intento de subida inmediata
+    // 2. Empuje forzado a la nube
     try {
       const synced = await syncWithCloud(updated);
       if (synced && synced.length !== updated.length) {
         setVoteRecords(synced);
       }
     } catch (e) {
-      console.warn("Registro guardado localmente. Se subirá al recuperar conexión.");
+      console.warn("Guardado localmente. Se sincronizará al recuperar señal.");
     }
   };
 
   const handleAdminAccess = useCallback(() => {
-    const code = prompt("🔑 MODO ADMINISTRADOR\nIngrese código de seguridad:");
+    const code = prompt("🔑 MODO ADMINISTRADOR\nIngrese código:");
     if (code === "102") {
       setIsCollectorViewActive(false);
       setTapCount(0);
@@ -120,11 +118,9 @@ const App: React.FC = () => {
 
   const handleLogoTap = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    
     setIsAnimatingLogo(true);
     if ('vibrate' in navigator) navigator.vibrate(40);
     setTimeout(() => setIsAnimatingLogo(false), 100);
-    
     const newCount = tapCount + 1;
     if (newCount >= 3) {
       setTapCount(0);
@@ -142,7 +138,7 @@ const App: React.FC = () => {
           <ThankYouModal 
             voterName={lastRecord.voterName} 
             actorId={lastRecord.actorId}
-            voterCount={currentVoterNumber}
+            voterCount={voteRecords.length}
             phoneNumber={lastRecord.phoneNumber}
             onClose={() => setLastRecord(null)} 
           />
@@ -151,15 +147,17 @@ const App: React.FC = () => {
         <div className="max-w-md w-full px-6 pt-8 pb-20 space-y-8">
           <header className="text-center space-y-4">
             <div className="flex flex-col items-center gap-3">
-               <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-lg border border-white/10 animate-pulse">
-                  <i className="fa-solid fa-satellite-dish"></i>
-                  CAPTACIÓN ACTIVA
+               <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-lg border border-white/10">
+                  <i className={`fa-solid fa-satellite-dish ${isSyncing ? 'animate-pulse' : ''}`}></i>
+                  RED EN VIVO
                </div>
-               <div className="bg-blue-900/50 px-4 py-1.5 rounded-xl border border-blue-500/30 flex items-center gap-3">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
-                  <span className="text-white font-black text-xs uppercase tracking-tighter">
-                    GLOBAL: <span className="text-amber-400 text-lg ml-1">{voteRecords.length}</span>
-                  </span>
+               
+               <div className={`transition-all duration-500 bg-blue-900/40 px-5 py-3 rounded-2xl border ${hasNewActivity ? 'border-amber-400 shadow-amber-400/20' : 'border-blue-500/20'} flex flex-col items-center gap-1`}>
+                  <div className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Contabilizados Global</div>
+                  <div className="text-4xl font-black text-white italic tracking-tighter">
+                    {voteRecords.length} <span className="text-amber-400 font-black">#102</span>
+                  </div>
+                  {hasNewActivity && <div className="text-[8px] font-bold text-amber-400 animate-bounce">NUEVO REGISTRO DETECTADO</div>}
                </div>
             </div>
             
@@ -168,14 +166,13 @@ const App: React.FC = () => {
               onClick={handleLogoTap}
             >
               <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
-                TRIANA <span className="text-[#facc15]">102</span>
+                TRIANA <span className="text-amber-400">102</span>
               </h1>
-              <div className="h-1 mx-auto rounded-full mt-2 w-12 bg-slate-800"></div>
             </div>
           </header>
 
           <div className="bg-slate-900/60 rounded-[2.5rem] border border-slate-800 shadow-2xl backdrop-blur-xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-amber-400"></div>
             <VoteRegistry 
               actors={ACTORS} 
               records={[]} 
@@ -186,7 +183,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="text-center opacity-30 mt-8">
-            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Paipa, Boyacá • Red Estratégica 102 • v2.0</p>
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Mano Firme por Boyacá • Sincronización v3.0</p>
           </div>
         </div>
       </div>
@@ -199,7 +196,7 @@ const App: React.FC = () => {
         <ThankYouModal 
           voterName={lastRecord.voterName} 
           actorId={lastRecord.actorId}
-          voterCount={currentVoterNumber}
+          voterCount={voteRecords.length}
           phoneNumber={lastRecord.phoneNumber}
           onClose={() => setLastRecord(null)} 
         />
@@ -207,7 +204,7 @@ const App: React.FC = () => {
 
       <header className="relative bg-white rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row border border-slate-100">
         <div className="md:w-[32%] bg-[#facc15] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
-           <h2 className="text-3xl md:text-5xl font-black text-blue-900 italic leading-none z-10 uppercase">#POR TI BOYACÁ</h2>
+           <h2 className="text-3xl md:text-5xl font-black text-blue-900 italic z-10 uppercase">#POR TI BOYACÁ</h2>
         </div>
         <div className="md:w-[68%] p-6 md:p-12 flex flex-col justify-center relative bg-slate-50">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -227,13 +224,13 @@ const App: React.FC = () => {
               className="w-full md:w-auto bg-blue-900 hover:bg-blue-950 text-white px-6 py-3 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 border border-white/10"
             >
               <i className="fa-solid fa-mobile-screen-button text-amber-400"></i>
-              <span className="font-black uppercase text-[10px] tracking-wider">Modo Recolector</span>
+              <span className="font-black uppercase text-[10px] tracking-wider">MODO RECOLECTOR</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* ESTADÍSTICAS GLOBALES ACTUALIZADAS */}
+      {/* PANEL DE CONTEO GLOBAL EN TIEMPO REAL */}
       <ElectoralStats currentVotes={voteRecords.length} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -259,16 +256,16 @@ const App: React.FC = () => {
         <aside className="space-y-8">
           <AnalysisPanel selectedActor={selectedActor} />
           <div className="bg-slate-900/60 p-8 rounded-[2.5rem] border border-slate-800 text-center space-y-6 backdrop-blur-xl">
-            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 ${isSyncing ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'border-emerald-500'} bg-white/5`}>
+            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 ${isSyncing ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-pulse' : 'border-emerald-500'} bg-white/5`}>
                <i className={`fa-solid ${isSyncing ? 'fa-sync fa-spin' : 'fa-check'} text-2xl ${isSyncing ? 'text-amber-400' : 'text-emerald-400'}`}></i>
             </div>
-            <h4 className="text-white font-black uppercase text-[10px] tracking-[0.2em]">{isSyncing ? 'Consolidando Red...' : 'Sistema Sincronizado'}</h4>
+            <h4 className="text-white font-black uppercase text-[10px] tracking-[0.2em]">{isSyncing ? 'Sincronizando...' : 'Conexión Segura'}</h4>
           </div>
         </aside>
       </div>
 
       <footer className="pt-10 pb-6 text-center opacity-20">
-        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Mano Firme por Boyacá • v2.0 • Sincronización Multi-Agente</p>
+        <p className="text-[8px] text-slate-500 uppercase tracking-widest">Control Electoral Boyacá • Sincronización Global de Red • v3.0</p>
       </footer>
     </div>
   );
