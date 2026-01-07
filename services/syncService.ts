@@ -2,32 +2,31 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-const MASTER_CHANNEL_NAME = "TRIANA_V102_MASTER_REVISION_PRO";
+const DRIVE_KEY = "TRIANA_V102_CLOUD_DRIVE_PRO";
 
-interface CloudPayload {
+interface DrivePayload {
   records: VoteRecord[];
   rev: number;
-  lastUpdate: string;
+  updatedAt: string;
+  source: string;
 }
 
-// Variable persistente en sesión para evitar búsquedas constantes
-let activeObjectId: string | null = localStorage.getItem('v102_cloud_id');
+let cachedObjectId: string | null = localStorage.getItem('v102_drive_id');
+
+const getTimestamp = () => new Date().toISOString();
 
 /**
- * Busca el ID del objeto maestro en la API pública usando el nombre como clave
+ * Localiza el "Disco Virtual" en la nube
  */
-const discoverMasterId = async (): Promise<string | null> => {
+const locateDrive = async (): Promise<string | null> => {
   try {
-    const res = await fetch(`${API_BASE}?t=${Date.now()}`, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" }
-    });
+    const res = await fetch(`${API_BASE}?nocache=${Date.now()}`);
     if (!res.ok) return null;
     const items = await res.json();
-    const master = items.find((i: any) => i.name === MASTER_CHANNEL_NAME);
-    if (master) {
-      localStorage.setItem('v102_cloud_id', master.id);
-      return master.id;
+    const drive = items.find((i: any) => i.name === DRIVE_KEY);
+    if (drive) {
+      localStorage.setItem('v102_drive_id', drive.id);
+      return drive.id;
     }
     return null;
   } catch (e) {
@@ -35,83 +34,86 @@ const discoverMasterId = async (): Promise<string | null> => {
   }
 };
 
-export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
-  try {
-    // 1. Asegurar Conexión al Canal
-    let objectId = activeObjectId;
-    if (!objectId) {
-      objectId = await discoverMasterId();
-      activeObjectId = objectId;
+/**
+ * Fusión inteligente de registros (Merge)
+ * Evita duplicados por ID y mantiene el orden cronológico
+ */
+const mergeRecords = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
+  const map = new Map<string, VoteRecord>();
+  // Prioridad a lo que ya está en la nube (servidor central)
+  remote.forEach(r => map.set(r.idNumber, r));
+  // Añadir locales que no existan
+  local.forEach(r => {
+    if (!map.has(r.idNumber)) {
+      map.set(r.idNumber, r);
     }
+  });
+  return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+};
 
-    // 2. Si el canal no existe, el primer dispositivo con datos lo crea
-    if (!objectId) {
+export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
+  try {
+    let driveId = cachedObjectId || await locateDrive();
+    
+    // Si no existe el drive, lo inicializamos
+    if (!driveId) {
       if (localRecords.length === 0) return [];
       
-      const createRes = await fetch(API_BASE, {
+      const initRes = await fetch(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: MASTER_CHANNEL_NAME,
-          data: { records: localRecords, rev: 1, lastUpdate: new Date().toISOString() }
+          name: DRIVE_KEY,
+          data: { records: localRecords, rev: 1, updatedAt: getTimestamp(), source: 'master' }
         })
       });
       
-      if (createRes.ok) {
-        const created = await createRes.json();
-        activeObjectId = created.id;
-        localStorage.setItem('v102_cloud_id', created.id);
+      if (initRes.ok) {
+        const data = await initRes.json();
+        localStorage.setItem('v102_drive_id', data.id);
+        cachedObjectId = data.id;
       }
       return localRecords;
     }
 
-    // 3. Obtener Estado Remoto
-    const remoteRes = await fetch(`${API_BASE}/${objectId}?t=${Date.now()}`, {
+    // Consultar estado actual del Drive
+    const driveRes = await fetch(`${API_BASE}/${driveId}?cb=${Date.now()}`, {
       cache: "no-store",
-      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+      headers: { "Cache-Control": "no-cache" }
     });
 
-    if (remoteRes.status === 404) {
-      localStorage.removeItem('v102_cloud_id');
-      activeObjectId = null;
+    if (driveRes.status === 404) {
+      localStorage.removeItem('v102_drive_id');
+      cachedObjectId = null;
       return localRecords;
     }
 
-    if (!remoteRes.ok) return localRecords;
-
-    const remoteObj = await remoteRes.json();
-    const remoteData: CloudPayload = remoteObj.data;
+    const driveObj = await driveRes.json();
+    const cloudRecords: VoteRecord[] = driveObj.data?.records || [];
     
-    // 4. LÓGICA DE SINCRONIZACIÓN POR REVISIÓN
-    // Caso A: La nube tiene una versión más nueva (o más registros) -> Ganador Nube
-    if (remoteData.records.length > localRecords.length) {
-      console.log(`[SYNC] Nube gana: ${remoteData.records.length} registros.`);
-      return remoteData.records;
-    }
+    // LOGICA DE DRIVE: SIEMPRE FUSIONAR
+    const finalRecords = mergeRecords(localRecords, cloudRecords);
 
-    // Caso B: El local tiene más registros -> Ganador Local (Actualizar Nube)
-    if (localRecords.length > remoteData.records.length) {
-      console.log(`[SYNC] Local gana: Subiendo ${localRecords.length} registros.`);
-      await fetch(`${API_BASE}/${objectId}`, {
+    // Si después de la fusión hay más datos de los que tiene la nube, actualizamos la nube
+    if (finalRecords.length > cloudRecords.length || localRecords.length > cloudRecords.length) {
+      console.log("[DRIVE] Actualizando disco central...");
+      await fetch(`${API_BASE}/${driveId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: MASTER_CHANNEL_NAME,
+          name: DRIVE_KEY,
           data: { 
-            records: localRecords, 
-            rev: (remoteData.rev || 0) + 1, 
-            lastUpdate: new Date().toISOString() 
+            records: finalRecords, 
+            rev: (driveObj.data?.rev || 0) + 1, 
+            updatedAt: getTimestamp() 
           }
         })
       });
-      return localRecords;
     }
 
-    // Caso C: Empate -> Devolvemos registros remotos por seguridad de integridad
-    return remoteData.records || localRecords;
-
+    return finalRecords;
   } catch (error) {
-    console.error("[SYNC ERROR]", error);
+    console.error("[DRIVE ERROR]", error);
     return localRecords;
   }
 };

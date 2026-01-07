@@ -31,93 +31,102 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord }) => {
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Base102_Completa");
-    XLSX.writeFile(wb, `Base_Datos_Triana_102_${Date.now()}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Drive_102_Central");
+    XLSX.writeFile(wb, `Drive_Triana_102_Export_${Date.now()}.xlsx`);
   };
 
   return (
-    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 h-[450px] flex flex-col">
+    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 h-[450px] flex flex-col overflow-hidden">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-amber-400/20 p-2 rounded-lg border border-amber-400/30 text-amber-400">
-            <i className="fa-solid fa-database text-lg"></i>
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
+            <i className="fa-solid fa-table-list text-white text-xl"></i>
           </div>
           <div>
-            <h3 className="text-lg font-black text-white uppercase tracking-tight">Centro de Datos Base 102</h3>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Registros Consolidados Paipa</p>
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Drive Console <span className="text-blue-500">v1.02</span></h3>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em]">Gestión de Activos Electorales</p>
           </div>
         </div>
 
         <div className="flex gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+            <i className="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
             <input 
               type="text" 
-              placeholder="Buscar por nombre, cédula..." 
+              placeholder="Filtro rápido Drive..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs text-white focus:border-amber-400 outline-none transition-all shadow-inner"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-[11px] text-white focus:border-blue-500 outline-none transition-all shadow-inner uppercase font-bold"
             />
           </div>
           <button 
             onClick={handleExportExcel}
             disabled={records.length === 0}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 text-white p-2 rounded-xl transition-all"
-            title="Exportar a Excel"
+            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white px-6 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
           >
-            <i className="fa-solid fa-file-excel px-2"></i>
+            <i className="fa-solid fa-download"></i> EXCEL
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-800 rounded-xl bg-slate-950/30">
-        {filteredRecords.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4 opacity-50 italic">
-            <i className="fa-solid fa-folder-open text-4xl"></i>
-            <p className="text-sm">No se encontraron registros en la base</p>
-          </div>
-        ) : (
-          <table className="w-full text-left text-[11px] uppercase font-bold border-collapse">
-            <thead className="sticky top-0 bg-slate-900 text-slate-500 z-10">
+      <div className="flex-1 overflow-auto custom-scrollbar border border-slate-800 rounded-2xl bg-slate-950/30">
+        <table className="w-full text-left text-[10px] uppercase font-bold border-collapse">
+          <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-md text-slate-500 z-10">
+            <tr>
+              <th className="p-4 border-b border-slate-800 tracking-widest">Status</th>
+              <th className="p-4 border-b border-slate-800 tracking-widest">ID Cédula</th>
+              <th className="p-4 border-b border-slate-800 tracking-widest">Ciudadano</th>
+              <th className="p-4 border-b border-slate-800 tracking-widest">Sector</th>
+              <th className="p-4 border-b border-slate-800 text-right tracking-widest">Control</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/30">
+            {filteredRecords.length === 0 ? (
               <tr>
-                <th className="p-4 border-b border-slate-800">Cédula</th>
-                <th className="p-4 border-b border-slate-800">Nombre Completo</th>
-                <th className="p-4 border-b border-slate-800">Sector / Gremio</th>
-                <th className="p-4 border-b border-slate-800 text-right">Acción</th>
+                <td colSpan={5} className="p-20 text-center">
+                  <div className="flex flex-col items-center gap-4 opacity-20">
+                    <i className="fa-solid fa-folder-open text-6xl"></i>
+                    <p className="text-xs italic">El Drive está vacío. Comience a recolectar.</p>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/50">
-              {filteredRecords.map(r => (
-                <tr key={r.id} className="hover:bg-blue-900/10 text-slate-300 group transition-colors">
-                  <td className="p-4 font-mono text-amber-400/80">{r.idNumber}</td>
-                  <td className="p-4 text-white font-black">{r.voterName}</td>
+            ) : (
+              filteredRecords.map((r, i) => (
+                <tr key={r.id} className="hover:bg-white/5 group transition-colors">
                   <td className="p-4">
-                    <span className="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-[9px] border border-slate-700">
-                      {actors.find(a => a.id === r.actorId)?.name || 'S/D'}
+                    <div className="flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                       <span className="text-[8px] text-emerald-500">VIBRANTE</span>
+                    </div>
+                  </td>
+                  <td className="p-4 font-mono text-slate-400">{r.idNumber}</td>
+                  <td className="p-4 text-white">{r.voterName}</td>
+                  <td className="p-4">
+                    <span className="bg-slate-800/50 text-slate-400 px-3 py-1 rounded-lg border border-slate-800 text-[8px]">
+                      {actors.find(a => a.id === r.actorId)?.name.split(' ')[1] || 'GENERAL'}
                     </span>
                   </td>
                   <td className="p-4 text-right">
                     <button 
                       onClick={() => onDeleteRecord(r.id)} 
-                      className="text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2"
-                      title="Eliminar Registro"
+                      className="text-slate-800 hover:text-red-500 transition-all p-2 bg-slate-900/50 rounded-lg"
                     >
                       <i className="fa-solid fa-trash-can"></i>
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
-        <div className="flex gap-4">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Online</span>
-          <span>Mostrando {filteredRecords.length} de {records.length} registros</span>
+      <div className="mt-4 flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-600">
+        <div className="flex gap-6">
+          <span className="flex items-center gap-2"><i className="fa-solid fa-check-double text-emerald-500"></i> Drive Protegido</span>
+          <span>Nodos Conectados: {Math.floor(records.length / 5) + 1}</span>
         </div>
-        <div className="text-amber-400 italic">Paipa - Boyacá 102</div>
+        <div className="text-blue-500">CLOUD SYNC ACTIVE • PAIPA 2024</div>
       </div>
     </div>
   );
