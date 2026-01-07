@@ -30,19 +30,28 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
     { label: 'DPTO', value: 'BOYACA', color: 'bg-slate-900', textColor: 'text-sky-400' },
     { label: 'CENSO', value: potentialVoters.toLocaleString(), color: 'bg-slate-900', textColor: 'text-white' },
     { 
-      label: 'IDENTIFICADOS', 
+      label: 'CONSOLIDADO RED', 
       value: currentVotes.toLocaleString(), 
       color: 'bg-blue-950', 
       textColor: 'text-amber-400', 
       highlight: true, 
       animate: isAnimating
     },
-    { label: 'META', value: targetVotes.toLocaleString(), color: 'bg-blue-600', textColor: 'text-white' },
-    { label: 'FALTA', value: remaining.toLocaleString(), color: 'bg-slate-900', textColor: 'text-amber-400' },
+    { label: 'META TOTAL', value: targetVotes.toLocaleString(), color: 'bg-blue-600', textColor: 'text-white' },
+    { label: 'POR LOGRAR', value: remaining.toLocaleString(), color: 'bg-slate-900', textColor: 'text-amber-400' },
   ];
 
   return (
     <div className="space-y-4">
+      {/* Indicador de Estado Global */}
+      <div className="flex items-center gap-2 justify-center md:justify-start px-4">
+         <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+         </span>
+         <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Sincronización Global Activa (Todos los recolectores)</span>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
         {stats.map((stat, i) => (
           <div 
@@ -59,7 +68,7 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
               {stat.highlight && (
                 <div className="mt-2 flex items-center gap-1.5">
                    <span className={`w-1.5 h-1.5 rounded-full bg-amber-400 ${stat.animate ? 'animate-ping' : 'opacity-40'}`}></span>
-                   <span className="text-[7px] md:text-[9px] font-black text-white uppercase tracking-tighter">RED 102</span>
+                   <span className="text-[7px] md:text-[9px] font-black text-white uppercase tracking-tighter">TOTAL CAMPAÑA</span>
                 </div>
               )}
             </div>
@@ -72,9 +81,9 @@ const ElectoralStats: React.FC<Props> = ({ currentVotes }) => {
           <div className="space-y-1">
             <h4 className="text-[9px] md:text-xs font-black text-sky-400 uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
-              Sincronización Real
+              Progreso de Victoria 102
             </h4>
-            <div className="text-sm md:text-2xl font-black text-white uppercase tracking-tighter italic">Triana • Fuerza Paipa</div>
+            <div className="text-sm md:text-2xl font-black text-white uppercase tracking-tighter italic">Consolidado Nacional • Tiempo Real</div>
           </div>
           <div className="text-right">
             <span className={`text-lg md:text-4xl font-black text-amber-400 ${isAnimating ? 'animate-bounce' : ''}`}>

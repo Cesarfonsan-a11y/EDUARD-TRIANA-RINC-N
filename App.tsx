@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ACTORS, RELATIONS, SECTOR_MESSAGES } from './constants.ts';
-import { ActorNode, VoteRecord, ElectoralZone } from './types.ts';
+import { ACTORS, RELATIONS } from './constants.ts';
+import { ActorNode, VoteRecord } from './types.ts';
 import NetworkGraph from './components/NetworkGraph.tsx';
 import AnalysisPanel from './components/AnalysisPanel.tsx';
 import VoteRegistry from './components/VoteRegistry.tsx';
@@ -12,8 +12,9 @@ import DatabaseView from './components/DatabaseView.tsx';
 import { syncWithCloud } from './services/syncService.ts';
 
 const App: React.FC = () => {
+  // Estado inicial desde caché local para velocidad
   const [voteRecords, setVoteRecords] = useState<VoteRecord[]>(() => {
-    const saved = localStorage.getItem('paipa_triana_v6_cache');
+    const saved = localStorage.getItem('v102_prod_cache');
     return saved ? JSON.parse(saved) : [];
   });
   
@@ -27,9 +28,10 @@ const App: React.FC = () => {
   
   const recordsRef = useRef<VoteRecord[]>(voteRecords);
 
+  // Guardar en caché local siempre que cambie la lista
   useEffect(() => {
     recordsRef.current = voteRecords;
-    localStorage.setItem('paipa_triana_v6_cache', JSON.stringify(voteRecords));
+    localStorage.setItem('v102_prod_cache', JSON.stringify(voteRecords));
   }, [voteRecords]);
 
   const [isCollectorViewActive, setIsCollectorViewActive] = useState(() => {
@@ -40,24 +42,22 @@ const App: React.FC = () => {
     localStorage.setItem('v102_collector_active', isCollectorViewActive.toString());
   }, [isCollectorViewActive]);
 
+  // FUNCIÓN MAESTRA DE SINCRONIZACIÓN GLOBAL
   const performGlobalSync = useCallback(async (manualData?: VoteRecord[]) => {
     if (isSyncing && !manualData) return;
     
     setIsSyncing(true);
     try {
-      const currentLocalData = manualData || recordsRef.current;
-      const globalData = await syncWithCloud(currentLocalData);
+      const dataToSync = manualData || recordsRef.current;
+      const globalData = await syncWithCloud(dataToSync);
       
-      if (globalData) {
-        // Actualizamos siempre que el conteo de la nube sea mayor o igual al local
-        // para asegurar que las nuevas entradas de otros dispositivos se reflejen.
-        if (globalData.length >= recordsRef.current.length) {
-          if (globalData.length > recordsRef.current.length) {
-            setHasNewActivity(true);
-            setTimeout(() => setHasNewActivity(false), 3000);
-          }
-          setVoteRecords(globalData);
+      if (globalData && globalData.length >= 0) {
+        // Si el número de registros aumentó, notificamos visualmente
+        if (globalData.length > recordsRef.current.length) {
+          setHasNewActivity(true);
+          setTimeout(() => setHasNewActivity(false), 3000);
         }
+        setVoteRecords(globalData);
       }
     } catch (e) {
       console.error("Sync error:", e);
@@ -66,19 +66,19 @@ const App: React.FC = () => {
     }
   }, [isSyncing]);
 
-  // Sincronización inicial y periódica
+  // Polling: Revisar la nube cada 5 segundos para actualizar el total de todos los recolectores
   useEffect(() => {
-    performGlobalSync();
+    performGlobalSync(); // Carga inicial
     const timer = setInterval(() => {
       performGlobalSync();
-    }, 4000); // Polling más frecuente para tiempo real
+    }, 5000); 
     return () => clearInterval(timer);
   }, []);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
-    // Verificación local inmediata
+    // Verificación local anti-duplicados rápida
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
-      alert("⚠️ Esta cédula ya está registrada.");
+      alert("⚠️ Esta cédula ya se encuentra en el sistema.");
       return;
     }
 
@@ -92,7 +92,7 @@ const App: React.FC = () => {
     setVoteRecords(nextList);
     setLastRecord(newEntry);
     
-    // Forzamos la subida a la nube
+    // Sincronización inmediata al guardar un nuevo voto
     await performGlobalSync(nextList);
   };
 
@@ -108,6 +108,7 @@ const App: React.FC = () => {
     }
   };
 
+  // VISTA DE RECOLECTOR (LA QUE USARÁ EL EQUIPO EN CAMPO)
   if (isCollectorViewActive) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center animate-in fade-in duration-500 pb-20 overflow-x-hidden relative">
@@ -160,7 +161,7 @@ const App: React.FC = () => {
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${isSyncing ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest">
-                  LIVE: {voteRecords.length} REGISTROS
+                  EQUIPO PAIPA: {voteRecords.length} REGISTROS
                 </span>
              </div>
              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">
@@ -181,13 +182,14 @@ const App: React.FC = () => {
           
           <div className="text-center space-y-1">
             <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Central de Inteligencia Paipa</p>
-            <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Fuerza Triana 102 • Cloud Sync</p>
+            <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Conectado a Red Global 102</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // VISTA DE PANEL MAESTRO (PARA SEGUIMIENTO ESTRATÉGICO)
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700 pb-24">
       <header className="bg-white rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-slate-100 flex flex-col md:flex-row min-h-[220px] md:min-h-[350px] relative">
@@ -201,7 +203,7 @@ const App: React.FC = () => {
            <div className="space-y-1 md:space-y-4">
               <div className="flex items-center gap-2">
                 <span className="bg-blue-900 text-white px-2 py-0.5 rounded text-[8px] md:text-[10px] font-black uppercase tracking-widest">CENTRO DEMOCRÁTICO</span>
-                {isSyncing && <span className="text-amber-500 animate-pulse text-[8px] font-black uppercase"><i className="fa-solid fa-sync fa-spin mr-1"></i></span>}
+                {isSyncing && <span className="text-amber-500 animate-pulse text-[8px] font-black uppercase"><i className="fa-solid fa-sync fa-spin mr-1"></i> SINCRO LIVE</span>}
               </div>
               <h1 className="text-blue-950 font-black text-5xl md:text-[11rem] tracking-tighter uppercase leading-[0.8]">TRIANA</h1>
               <span className="text-sky-500 font-black text-xl md:text-6xl uppercase tracking-widest block italic leading-none">CÁMARA 102</span>
@@ -209,6 +211,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {/* Botón Flotante para cambiar a modo captura rápido */}
       <button 
         onClick={() => setIsCollectorViewActive(true)}
         className="fixed bottom-6 right-6 z-[100] bg-blue-950 text-white w-16 h-16 md:w-24 md:h-24 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center border-b-4 border-amber-500 hover:scale-110 active:scale-95 transition-all group"
@@ -244,8 +247,8 @@ const App: React.FC = () => {
                <i className={`fa-solid ${isSyncing ? 'fa-satellite-dish' : 'fa-network-wired'} text-4xl ${isSyncing ? 'text-amber-400' : 'text-emerald-400'}`}></i>
             </div>
             <div className="space-y-2">
-              <p className="text-white font-black uppercase text-xs tracking-widest">{isSyncing ? 'CONSOLIDANDO...' : 'SISTEMA ONLINE'}</p>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Paipa • Triana 102</p>
+              <p className="text-white font-black uppercase text-xs tracking-widest">{isSyncing ? 'CONSOLIDANDO...' : 'EQUIPO ONLINE'}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Refresco cada 5s • Paipa</p>
             </div>
           </div>
         </aside>

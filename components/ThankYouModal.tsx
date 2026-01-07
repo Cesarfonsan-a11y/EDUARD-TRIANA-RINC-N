@@ -119,12 +119,11 @@ const ThankYouModal: React.FC<Props> = ({ voterName, actorId, voterCount, phoneN
           ref={cardRef} 
           className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#facc15] relative w-full flex flex-col min-h-[580px]"
         >
-          {/* Sello de Victoria */}
+          {/* Sello de Identificación (Sin palabra Victoria) */}
           <div className="absolute bottom-6 right-1 w-24 h-24 rotate-[12deg] z-30 pointer-events-none filter drop-shadow-xl">
              <div className="w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 rounded-full border-[4px] border-white flex flex-col items-center justify-center shadow-inner relative">
                 <span className="text-[6px] font-black text-blue-900/80 uppercase mb-0.5">CÁMARA</span>
                 <span className="text-3xl font-black text-blue-950 italic leading-none">102</span>
-                <span className="text-[7px] font-black text-blue-900 uppercase">VICTORIA</span>
              </div>
           </div>
 
