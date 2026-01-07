@@ -12,12 +12,16 @@ import DatabaseView from './components/DatabaseView.tsx';
 import { syncWithCloud } from './services/syncService.ts';
 
 const App: React.FC = () => {
-  // Estado inicial desde caché local para velocidad
+  // Estado de registros
   const [voteRecords, setVoteRecords] = useState<VoteRecord[]>(() => {
     const saved = localStorage.getItem('v102_prod_cache');
     return saved ? JSON.parse(saved) : [];
   });
   
+  // Referencia para evitar cierres rancios en el setInterval
+  const recordsRef = useRef<VoteRecord[]>(voteRecords);
+  const syncLock = useRef(false);
+
   const [selectedActor, setSelectedActor] = useState<ActorNode | null>(null);
   const [viewMode, setViewMode] = useState<'network' | 'participation' | 'database'>('network');
   const [lastRecord, setLastRecord] = useState<VoteRecord | null>(null);
@@ -25,10 +29,8 @@ const App: React.FC = () => {
   const [hasNewActivity, setHasNewActivity] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
-  
-  const recordsRef = useRef<VoteRecord[]>(voteRecords);
 
-  // Guardar en caché local siempre que cambie la lista
+  // Sincronizar la referencia siempre que cambie el estado
   useEffect(() => {
     recordsRef.current = voteRecords;
     localStorage.setItem('v102_prod_cache', JSON.stringify(voteRecords));
@@ -42,43 +44,54 @@ const App: React.FC = () => {
     localStorage.setItem('v102_collector_active', isCollectorViewActive.toString());
   }, [isCollectorViewActive]);
 
-  // FUNCIÓN MAESTRA DE SINCRONIZACIÓN GLOBAL
-  const performGlobalSync = useCallback(async (manualData?: VoteRecord[]) => {
-    if (isSyncing && !manualData) return;
+  // FUNCIÓN DE SINCRONIZACIÓN CORREGIDA
+  const performGlobalSync = async (manualData?: VoteRecord[]) => {
+    if (syncLock.current && !manualData) return;
     
+    syncLock.current = true;
     setIsSyncing(true);
+    
     try {
       const dataToSync = manualData || recordsRef.current;
       const globalData = await syncWithCloud(dataToSync);
       
-      if (globalData && globalData.length >= 0) {
-        // Si el número de registros aumentó, notificamos visualmente
+      if (globalData && Array.isArray(globalData)) {
+        // Si detectamos que la nube tiene MÁS datos que nosotros, actualizamos localmente
         if (globalData.length > recordsRef.current.length) {
+          console.log("¡Nuevos datos detectados desde otro dispositivo!");
           setHasNewActivity(true);
           setTimeout(() => setHasNewActivity(false), 3000);
+          setVoteRecords(globalData);
+        } else if (manualData) {
+          // Si es un registro manual, forzamos actualización
+          setVoteRecords(globalData);
         }
-        setVoteRecords(globalData);
       }
     } catch (e) {
-      console.error("Sync error:", e);
+      console.error("Sync Error:", e);
     } finally {
       setIsSyncing(false);
+      syncLock.current = false;
     }
-  }, [isSyncing]);
+  };
 
-  // Polling: Revisar la nube cada 5 segundos para actualizar el total de todos los recolectores
+  // CONTROLADOR DE INTERVALO ROBUSTO
   useEffect(() => {
-    performGlobalSync(); // Carga inicial
+    // Sincronización inicial inmediata
+    performGlobalSync();
+
+    // Intervalo de refresco constante
     const timer = setInterval(() => {
       performGlobalSync();
-    }, 5000); 
+    }, 4000); // Cada 4 segundos para máxima respuesta
+
     return () => clearInterval(timer);
   }, []);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
-    // Verificación local anti-duplicados rápida
+    // Evitar duplicados locales inmediatos
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
-      alert("⚠️ Esta cédula ya se encuentra en el sistema.");
+      alert("⚠️ Esta cédula ya se encuentra registrada.");
       return;
     }
 
@@ -92,7 +105,7 @@ const App: React.FC = () => {
     setVoteRecords(nextList);
     setLastRecord(newEntry);
     
-    // Sincronización inmediata al guardar un nuevo voto
+    // Sincronización prioritaria inmediata
     await performGlobalSync(nextList);
   };
 
@@ -108,7 +121,6 @@ const App: React.FC = () => {
     }
   };
 
-  // VISTA DE RECOLECTOR (LA QUE USARÁ EL EQUIPO EN CAMPO)
   if (isCollectorViewActive) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center animate-in fade-in duration-500 pb-20 overflow-x-hidden relative">
@@ -161,7 +173,7 @@ const App: React.FC = () => {
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${isSyncing ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest">
-                  EQUIPO PAIPA: {voteRecords.length} REGISTROS
+                  TOTAL PAIPA: {voteRecords.length}
                 </span>
              </div>
              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">
@@ -179,17 +191,11 @@ const App: React.FC = () => {
               isPublic={true} 
             />
           </div>
-          
-          <div className="text-center space-y-1">
-            <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Central de Inteligencia Paipa</p>
-            <p className="text-slate-800 text-[8px] font-black uppercase tracking-[0.5em]">Conectado a Red Global 102</p>
-          </div>
         </div>
       </div>
     );
   }
 
-  // VISTA DE PANEL MAESTRO (PARA SEGUIMIENTO ESTRATÉGICO)
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700 pb-24">
       <header className="bg-white rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-slate-100 flex flex-col md:flex-row min-h-[220px] md:min-h-[350px] relative">
@@ -203,22 +209,13 @@ const App: React.FC = () => {
            <div className="space-y-1 md:space-y-4">
               <div className="flex items-center gap-2">
                 <span className="bg-blue-900 text-white px-2 py-0.5 rounded text-[8px] md:text-[10px] font-black uppercase tracking-widest">CENTRO DEMOCRÁTICO</span>
-                {isSyncing && <span className="text-amber-500 animate-pulse text-[8px] font-black uppercase"><i className="fa-solid fa-sync fa-spin mr-1"></i> SINCRO LIVE</span>}
+                {isSyncing && <span className="text-amber-500 animate-pulse text-[8px] font-black uppercase"><i className="fa-solid fa-sync fa-spin mr-1"></i> ACTUALIZANDO...</span>}
               </div>
               <h1 className="text-blue-950 font-black text-5xl md:text-[11rem] tracking-tighter uppercase leading-[0.8]">TRIANA</h1>
               <span className="text-sky-500 font-black text-xl md:text-6xl uppercase tracking-widest block italic leading-none">CÁMARA 102</span>
            </div>
         </div>
       </header>
-
-      {/* Botón Flotante para cambiar a modo captura rápido */}
-      <button 
-        onClick={() => setIsCollectorViewActive(true)}
-        className="fixed bottom-6 right-6 z-[100] bg-blue-950 text-white w-16 h-16 md:w-24 md:h-24 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center border-b-4 border-amber-500 hover:scale-110 active:scale-95 transition-all group"
-      >
-        <i className="fa-solid fa-tower-broadcast text-2xl md:text-4xl text-amber-400 group-hover:rotate-12"></i>
-        <span className="absolute -top-2 -right-2 bg-red-600 text-[10px] font-black px-2 py-1 rounded-full animate-pulse border-2 border-white">LIVE</span>
-      </button>
 
       <ElectoralStats currentVotes={voteRecords.length} />
 
@@ -247,12 +244,19 @@ const App: React.FC = () => {
                <i className={`fa-solid ${isSyncing ? 'fa-satellite-dish' : 'fa-network-wired'} text-4xl ${isSyncing ? 'text-amber-400' : 'text-emerald-400'}`}></i>
             </div>
             <div className="space-y-2">
-              <p className="text-white font-black uppercase text-xs tracking-widest">{isSyncing ? 'CONSOLIDANDO...' : 'EQUIPO ONLINE'}</p>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Refresco cada 5s • Paipa</p>
+              <p className="text-white font-black uppercase text-xs tracking-widest">{isSyncing ? 'SINCRONIZANDO...' : 'EQUIPO CONECTADO'}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Refresco Activo cada 4s</p>
             </div>
           </div>
         </aside>
       </div>
+
+      <button 
+        onClick={() => setIsCollectorViewActive(true)}
+        className="fixed bottom-6 right-6 z-[100] bg-blue-950 text-white w-16 h-16 md:w-24 md:h-24 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center border-b-4 border-amber-500 hover:scale-110 active:scale-95 transition-all group"
+      >
+        <i className="fa-solid fa-plus text-2xl md:text-4xl text-amber-400 group-hover:rotate-90 transition-transform"></i>
+      </button>
     </div>
   );
 };
