@@ -2,20 +2,16 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// ID de nivel profesional para asegurar persistencia global
-const CLOUD_OBJECT_ID = "triana-paipa-2024-v3"; 
-const STORAGE_NAME = "TRIANA_V3_MASTER";
+// VERSION 4 - LIMPIEZA TOTAL DE CACHÉ
+const CLOUD_OBJECT_ID = "triana-v4-master-paipa"; 
+const STORAGE_NAME = "TRIANA_V4_OFFICIAL";
 
 export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    // 1. PETICIÓN CON ROMPE-CACHÉ TOTAL
-    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}?v=${Date.now()}`, {
+    // 1. OBTENER DATOS DE LA NUBE (FUERZA BRUTA)
+    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}?nocache=${Date.now()}`, {
       method: 'GET',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+      headers: { 'Cache-Control': 'no-cache' }
     });
     
     let cloudRecords: VoteRecord[] = [];
@@ -24,7 +20,7 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
       const cloudData = await response.json();
       cloudRecords = cloudData.data?.records || [];
     } else if (response.status === 404) {
-      // Si la nube está vacía, intentamos crearla con lo local
+      // Si no existe y el celular tiene datos, CREAR EL OBJETO MAESTRO
       if (localRecords.length > 0) {
         await fetch(API_BASE, {
           method: 'POST',
@@ -39,40 +35,32 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
       return localRecords;
     }
 
-    // 2. LÓGICA DE FUSIÓN DE EMERGENCIA
-    const masterMap = new Map<string, VoteRecord>();
-    
-    // Lo de la nube siempre manda si el computador está en blanco
-    cloudRecords.forEach(r => {
-      if (r && r.idNumber) masterMap.set(r.idNumber, r);
-    });
-    
-    // Añadimos lo local (nuevos registros del celular)
-    localRecords.forEach(r => {
-      if (r && r.idNumber) masterMap.set(r.idNumber, r);
-    });
+    // 2. REGLA DE ORO: EL QUE TENGA MÁS REGISTROS ES EL DUEÑO DE LA VERDAD
+    // Caso A: La nube tiene más que yo -> Me actualizo con lo de la nube
+    if (cloudRecords.length > localRecords.length) {
+      console.log("Computador desactualizado. Bajando datos de la nube...");
+      return cloudRecords;
+    }
 
-    const merged = Array.from(masterMap.values())
-      .sort((a, b) => b.timestamp - a.timestamp);
-
-    // 3. ACTUALIZACIÓN FORZADA
-    // Si mi lista mezclada es más grande que la nube, subo.
-    // O si la nube tiene datos y mi local no, simplemente acepto lo de la nube.
-    if (merged.length > cloudRecords.length) {
-      console.log("Sincronizando nuevos datos hacia la nube...");
+    // Caso B: Yo (Celular) tengo más que la nube -> Subo mis datos a la nube
+    if (localRecords.length > cloudRecords.length) {
+      console.log("Celular con nuevos datos. Actualizando nube...");
       await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: STORAGE_NAME,
-          data: { records: merged }
+          data: { records: localRecords }
         })
       });
+      return localRecords;
     }
 
-    return merged;
+    // Caso C: Son iguales -> No hacemos nada
+    return cloudRecords.length > 0 ? cloudRecords : localRecords;
+
   } catch (error) {
-    console.error("Falla de red crítica:", error);
+    console.error("Error crítico de sincronización:", error);
     return localRecords;
   }
 };
