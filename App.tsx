@@ -28,13 +28,11 @@ const App: React.FC = () => {
     localStorage.setItem('triana_v102_drive_local', JSON.stringify(voteRecords));
   }, [voteRecords]);
 
-  // Función de Sincronización robusta
   const performDriveSync = useCallback(async (currentData?: VoteRecord[]) => {
     const dataToSync = currentData || voteRecords;
     setSyncState('syncing');
     try {
       const merged = await syncWithDrive(dataToSync);
-      // Solo actualizamos si el contenido es diferente para evitar bucles de renderizado
       if (JSON.stringify(merged) !== JSON.stringify(voteRecords)) {
         setVoteRecords(merged);
       }
@@ -45,7 +43,6 @@ const App: React.FC = () => {
     }
   }, [voteRecords]);
 
-  // Polling de alta frecuencia: Cada 5 segundos el computador revisa si el celular subió algo
   useEffect(() => {
     performDriveSync();
     const interval = setInterval(() => performDriveSync(), 5000);
@@ -54,17 +51,13 @@ const App: React.FC = () => {
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
-      alert("⚠️ Esta cédula ya se encuentra en el Drive Central.");
+      alert("⚠️ Esta cédula ya fue registrada por otro líder.");
       return;
     }
     const newEntry: VoteRecord = { ...record, id: `v102-${Date.now()}`, timestamp: Date.now() };
     const updatedRecords = [newEntry, ...voteRecords];
-    
-    // Actualizamos localmente para feedback instantáneo
     setVoteRecords(updatedRecords);
     setLastRecord(newEntry);
-
-    // FORZAMOS sincronización inmediata para que el computador lo vea YA
     await performDriveSync(updatedRecords);
   };
 
@@ -81,7 +74,6 @@ const App: React.FC = () => {
     } else if (newPass.length >= 3) setAdminPasscode('');
   };
 
-  // VISTA CELULAR (RECOLECTOR)
   if (isCollectorViewActive) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center pb-20 relative overflow-x-hidden">
@@ -102,9 +94,9 @@ const App: React.FC = () => {
         {lastRecord && <ThankYouModal voterName={lastRecord.voterName} actorId={lastRecord.actorId} voterCount={voteRecords.length} phoneNumber={lastRecord.phoneNumber} onClose={() => setLastRecord(null)} />}
         <div className="max-w-md w-full px-4 pt-6 space-y-6">
           <header className="text-center space-y-3">
-             <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border bg-emerald-900/10 border-emerald-500/30 text-white">
-                <div className={`w-1.5 h-1.5 rounded-full ${syncState === 'syncing' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`}></div>
-                <span className="text-[9px] font-black uppercase tracking-widest">DRIVE EN VIVO: {voteRecords.length}</span>
+             <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border bg-blue-900/20 border-blue-400/30 text-white">
+                <i className={`fa-solid fa-cloud ${syncState === 'syncing' ? 'fa-beat' : ''} text-blue-400`}></i>
+                <span className="text-[9px] font-black uppercase tracking-widest">NUBE TRIANA: {voteRecords.length}</span>
              </div>
              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">TRIANA <span className="text-amber-400">102</span></h1>
           </header>
@@ -117,7 +109,6 @@ const App: React.FC = () => {
     );
   }
 
-  // VISTA COMPUTADOR (DASHBOARD)
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 pb-24">
       <header className="bg-white rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[400px]">
@@ -131,7 +122,7 @@ const App: React.FC = () => {
                className="bg-[#1e3a8a] text-white px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest shadow-xl flex items-center gap-3 mx-auto active:scale-95 transition-all"
              >
                <i className={`fa-solid fa-cloud-arrow-down ${syncState === 'syncing' ? 'fa-bounce' : ''}`}></i>
-               DRIVE: {voteRecords.length} REGISTROS
+               DRIVE TRIANA: {voteRecords.length}
              </button>
            </div>
         </div>
@@ -175,10 +166,10 @@ const App: React.FC = () => {
           
           <div className="bg-slate-900/60 p-8 rounded-[2.5rem] border border-slate-800 text-center space-y-3">
              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className={`w-2 h-2 rounded-full ${syncState === 'syncing' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`}></div>
-                <span className="text-[9px] font-black text-white uppercase tracking-widest">DRIVE CONECTADO</span>
+                <i className="fa-solid fa-shield-halved text-emerald-500"></i>
+                <span className="text-[9px] font-black text-white uppercase tracking-widest">RESPALDO EN NUBE SEGURO</span>
              </div>
-             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Sync: {lastSyncTime}</p>
+             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Última Sync: {lastSyncTime}</p>
           </div>
         </aside>
       </div>

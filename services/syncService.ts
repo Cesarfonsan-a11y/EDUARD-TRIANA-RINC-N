@@ -2,23 +2,17 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-const DRIVE_KEY = "TRIANA_V102_CLOUD_DRIVE_PRO";
-
-interface DrivePayload {
-  records: VoteRecord[];
-  rev: number;
-  updatedAt: string;
-  source: string;
-}
+// Clave única para que todos los celulares y computadores vean LO MISMO
+const DRIVE_KEY = "TRIANA_102_CAMPAÑA_OFICIAL_PRO";
 
 let cachedObjectId: string | null = localStorage.getItem('v102_drive_id');
 
-const getTimestamp = () => new Date().toISOString();
-
 /**
- * Localiza el "Disco Virtual" en la nube
+ * Busca el disco central en la nube
  */
-const locateDrive = async (): Promise<string | null> => {
+const getDriveId = async (): Promise<string | null> => {
+  if (cachedObjectId) return cachedObjectId;
+  
   try {
     const res = await fetch(`${API_BASE}?nocache=${Date.now()}`);
     if (!res.ok) return null;
@@ -26,6 +20,7 @@ const locateDrive = async (): Promise<string | null> => {
     const drive = items.find((i: any) => i.name === DRIVE_KEY);
     if (drive) {
       localStorage.setItem('v102_drive_id', drive.id);
+      cachedObjectId = drive.id;
       return drive.id;
     }
     return null;
@@ -35,68 +30,58 @@ const locateDrive = async (): Promise<string | null> => {
 };
 
 /**
- * Fusión inteligente de registros (Merge)
- * Evita duplicados por ID y mantiene el orden cronológico
+ * Lógica de Fusión (Como en Google Sheets)
+ * Combina registros locales y de la nube sin borrar nada
  */
-const mergeRecords = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
-  const map = new Map<string, VoteRecord>();
-  // Prioridad a lo que ya está en la nube (servidor central)
-  remote.forEach(r => map.set(r.idNumber, r));
-  // Añadir locales que no existan
-  local.forEach(r => {
-    if (!map.has(r.idNumber)) {
-      map.set(r.idNumber, r);
+const mergeData = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
+  const all = [...local, ...remote];
+  const unique = new Map<string, VoteRecord>();
+  all.forEach(r => {
+    // Usamos la cédula como llave única para no duplicar personas
+    if (!unique.has(r.idNumber)) {
+      unique.set(r.idNumber, r);
     }
   });
-  return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+  return Array.from(unique.values()).sort((a, b) => b.timestamp - a.timestamp);
 };
 
 export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    let driveId = cachedObjectId || await locateDrive();
+    let driveId = await getDriveId();
     
-    // Si no existe el drive, lo inicializamos
+    // Si el disco no existe en internet, lo creamos por primera vez
     if (!driveId) {
       if (localRecords.length === 0) return [];
       
-      const initRes = await fetch(API_BASE, {
+      const response = await fetch(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: DRIVE_KEY,
-          data: { records: localRecords, rev: 1, updatedAt: getTimestamp(), source: 'master' }
+          data: { records: localRecords, lastUpdate: new Date().toISOString() }
         })
       });
       
-      if (initRes.ok) {
-        const data = await initRes.json();
+      if (response.ok) {
+        const data = await response.json();
         localStorage.setItem('v102_drive_id', data.id);
         cachedObjectId = data.id;
       }
       return localRecords;
     }
 
-    // Consultar estado actual del Drive
-    const driveRes = await fetch(`${API_BASE}/${driveId}?cb=${Date.now()}`, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" }
-    });
-
-    if (driveRes.status === 404) {
-      localStorage.removeItem('v102_drive_id');
-      cachedObjectId = null;
-      return localRecords;
-    }
+    // Si el disco existe, descargamos lo que tienen otros
+    const driveRes = await fetch(`${API_BASE}/${driveId}?cb=${Date.now()}`);
+    if (!driveRes.ok) return localRecords;
 
     const driveObj = await driveRes.json();
     const cloudRecords: VoteRecord[] = driveObj.data?.records || [];
     
-    // LOGICA DE DRIVE: SIEMPRE FUSIONAR
-    const finalRecords = mergeRecords(localRecords, cloudRecords);
+    // FUSIONAMOS: Local + Nube
+    const finalRecords = mergeData(localRecords, cloudRecords);
 
-    // Si después de la fusión hay más datos de los que tiene la nube, actualizamos la nube
+    // Si hay datos nuevos tras la fusión, actualizamos el disco central
     if (finalRecords.length > cloudRecords.length || localRecords.length > cloudRecords.length) {
-      console.log("[DRIVE] Actualizando disco central...");
       await fetch(`${API_BASE}/${driveId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -104,8 +89,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRec
           name: DRIVE_KEY,
           data: { 
             records: finalRecords, 
-            rev: (driveObj.data?.rev || 0) + 1, 
-            updatedAt: getTimestamp() 
+            lastUpdate: new Date().toISOString() 
           }
         })
       });
@@ -113,7 +97,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRec
 
     return finalRecords;
   } catch (error) {
-    console.error("[DRIVE ERROR]", error);
+    console.error("Error de conexión con la Nube Triana:", error);
     return localRecords;
   }
 };
