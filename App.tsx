@@ -39,11 +39,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('v102_leader_name', leaderName);
-  }, [leaderName]);
-
-  useEffect(() => {
     localStorage.setItem('v102_google_url', googleSheetUrl);
-  }, [googleSheetUrl]);
+    localStorage.setItem('v102_collector_active', isCollectorViewActive.toString());
+  }, [leaderName, googleSheetUrl, isCollectorViewActive]);
 
   const performDriveSync = useCallback(async (currentData?: VoteRecord[]) => {
     const dataToSync = currentData || voteRecords;
@@ -62,13 +60,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     performDriveSync();
-    const interval = setInterval(() => performDriveSync(), 60000); 
+    // SINCRONIZACIÓN EN TIEMPO REAL: Cada 15 segundos los celulares/PCs se hablan entre sí vía Hub Central
+    const interval = setInterval(() => performDriveSync(), 15000); 
     return () => clearInterval(interval);
   }, [performDriveSync]);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
-      alert("⚠️ Registro Duplicado: Esta cédula ya se encuentra en el Data Hub Central.");
+      alert("⚠️ REGISTRO DUPLICADO: Esta identificación ya existe en el Consolidado Global.");
       return;
     }
     const newEntry: VoteRecord = { 
@@ -96,16 +95,17 @@ const App: React.FC = () => {
     } else if (newPass.length >= 3) setAdminPasscode('');
   };
 
+  // VISTA RECOLECTOR (CELULAR)
   if (isCollectorViewActive && !leaderName) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 font-sans">
         <div className="bg-slate-900 border border-blue-500/30 rounded-[3rem] p-10 w-full max-w-sm text-center space-y-8 shadow-2xl">
           <div className="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center border-4 border-white/10 shadow-lg">
-            <i className="fa-solid fa-satellite-dish text-3xl text-white"></i>
+            <i className="fa-solid fa-tower-broadcast text-3xl text-white"></i>
           </div>
           <div className="space-y-2">
             <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Estación de Captura</h2>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed px-4">Inicie sesión para conectar este nodo al Data Hub Central</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed px-4">Inicie sesión para conectar este dispositivo al Hub Centralizado</p>
           </div>
           <input 
             type="text" 
@@ -124,7 +124,7 @@ const App: React.FC = () => {
             }}
             className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl transition-all hover:bg-blue-500"
           >
-            Activar Nodo
+            ACTIVAR NODO
           </button>
         </div>
       </div>
@@ -150,21 +150,18 @@ const App: React.FC = () => {
         )}
         {lastRecord && <ThankYouModal voterName={lastRecord.voterName} actorId={lastRecord.actorId} voterCount={voteRecords.length} phoneNumber={lastRecord.phoneNumber} onClose={() => setLastRecord(null)} />}
         
-        {/* CABECERA BASADA EN IMAGEN PARA RECOLECTOR */}
         <div className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl mt-4 border border-slate-800">
            <div className="flex flex-col">
-              {/* Sección Amarilla */}
               <div className="bg-[#facc15] p-10 text-center space-y-6 flex flex-col items-center">
                  <h2 className="text-4xl md:text-5xl font-black text-[#1e3a8a] italic uppercase tracking-tighter leading-none">#POR TI BOYACÁ</h2>
-                 <button 
-                   onClick={() => performDriveSync()}
-                   className="bg-[#1e3a8a] text-white px-6 py-2.5 rounded-full inline-flex items-center gap-3 shadow-lg active:scale-95 transition-all"
-                 >
-                   <i className={`fa-solid fa-sync ${syncState === 'syncing' ? 'fa-spin' : ''} text-[10px]`}></i>
-                   <span className="text-[10px] font-black uppercase tracking-widest">DRIVE TRIANA: {voteRecords.length}</span>
-                 </button>
+                 <div className="bg-[#1e3a8a] text-white px-6 py-2.5 rounded-full inline-flex items-center gap-3 shadow-lg">
+                   <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-300"></span>
+                   </span>
+                   <span className="text-[10px] font-black uppercase tracking-widest">DRIVE GLOBAL: {voteRecords.length} REGISTROS</span>
+                 </div>
               </div>
-              {/* Sección Blanca */}
               <div className="bg-white p-8 pt-4 pb-10 space-y-1 text-center">
                  <h1 className="text-[#1e3a8a] font-black text-7xl tracking-tighter uppercase leading-none">TRIANA</h1>
                  <span className="text-[#38bdf8] font-black text-3xl uppercase tracking-tighter block italic leading-none">CÁMARA 102</span>
@@ -177,32 +174,27 @@ const App: React.FC = () => {
         </div>
 
         <div className="mt-4 flex gap-4 text-[9px] font-black uppercase tracking-widest text-slate-500 italic">
-           <span>HUB: {lastSyncTime}</span>
-           <span className="text-amber-400">HOY: {dailyCount}</span>
+           <span>LIVE HUB: {lastSyncTime}</span>
+           <span className="text-amber-400">NODO: {leaderName.toUpperCase()}</span>
         </div>
       </div>
     );
   }
 
+  // VISTA CENTRO DE MANDO (PC / TABLET)
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 pb-24 font-sans">
-      {/* CABECERA MAESTRA SEGÚN IMAGEN */}
       <header className="bg-white rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl flex flex-col md:flex-row border-b-8 border-slate-900">
-        {/* Bloque Izquierdo (Amarillo) */}
         <div className="md:w-[45%] bg-[#facc15] flex flex-col items-center justify-center p-12 md:p-16 text-center space-y-8">
            <h2 className="text-5xl md:text-7xl font-black text-[#1e3a8a] italic uppercase tracking-tighter leading-[0.9]">
              #POR TI<br/>BOYACÁ
            </h2>
-           <button 
-             onClick={() => performDriveSync()}
-             className="bg-[#1e3a8a] text-white px-8 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-4 active:scale-95 transition-all hover:bg-blue-900"
-           >
+           <div className="bg-[#1e3a8a] text-white px-8 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-4">
              <i className={`fa-solid fa-sync ${syncState === 'syncing' ? 'fa-spin' : ''}`}></i>
-             DRIVE TRIANA: {voteRecords.length}
-           </button>
+             CONSOLIDADO GLOBAL: {voteRecords.length}
+           </div>
         </div>
         
-        {/* Bloque Derecho (Blanco) */}
         <div className="md:w-[55%] p-14 md:p-20 flex flex-col items-center md:items-start justify-center bg-white">
            <div className="text-center md:text-left">
               <h1 className="text-[#1e3a8a] font-black text-7xl md:text-[11rem] tracking-tighter uppercase leading-[0.8]">
@@ -224,7 +216,7 @@ const App: React.FC = () => {
               {[
                 { id: 'network', label: 'MAPA DE INFLUENCIA', icon: 'fa-project-diagram' },
                 { id: 'participation', label: 'ESTADO DE METAS', icon: 'fa-bullseye' },
-                { id: 'database', label: 'DATA HUB CENTRAL', icon: 'fa-database' }
+                { id: 'database', label: 'DRIVE CENTRALIZADO', icon: 'fa-database' }
               ].map((m) => (
                 <button 
                   key={m.id}
@@ -258,15 +250,15 @@ const App: React.FC = () => {
                 <div className={`w-3 h-3 rounded-full ${syncState === 'syncing' ? 'bg-blue-400 animate-ping' : 'bg-emerald-500'}`}></div>
              </div>
              <div className="space-y-2">
-                <i className="fa-solid fa-server text-4xl text-slate-700 mb-2"></i>
+                <i className="fa-solid fa-satellite text-4xl text-slate-700 mb-2"></i>
                 <h4 className="text-white font-black uppercase text-xs tracking-widest italic">ESTADO DEL DATA HUB</h4>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                  Sincronización en tiempo real con la hoja maestra activa.
+                  Sistema sincronizado. Cualquier registro en celular se refleja aquí automáticamente.
                 </p>
              </div>
              <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                   <p className="text-[8px] font-black text-slate-600 uppercase mb-1">TOTAL</p>
+                   <p className="text-[8px] font-black text-slate-600 uppercase mb-1">GLOBAL</p>
                    <p className="text-xl font-black text-white">{voteRecords.length}</p>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
