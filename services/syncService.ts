@@ -2,24 +2,26 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// NUEVA LLAVE MAESTRA ÚNICA PARA PAIPA - REGENERADA PARA EVITAR CACHÉ
-const CLOUD_OBJECT_ID = "v102_paipa_master_live_2024_final"; 
-const STORAGE_NAME = "TRIANA_102_LIVE_SYNC_SYSTEM";
+// ID simplificado para máxima compatibilidad
+const CLOUD_OBJECT_ID = "paipa102triana"; 
+const STORAGE_NAME = "TRIANA_PROD_102";
 
 export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    // 1. INTENTAR OBTENER LA VERDAD DE LA NUBE
-    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`);
+    // AÑADIMOS UN TIMESTAMP PARA EVITAR EL CACHÉ DEL NAVEGADOR (CACHE BUSTING)
+    const timestamp = Date.now();
+    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}?t=${timestamp}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    });
     
     let cloudRecords: VoteRecord[] = [];
     
     if (response.ok) {
       const cloudData = await response.json();
-      // Verificamos la estructura exacta del API sandbox
       cloudRecords = cloudData.data?.records || [];
     } else if (response.status === 404) {
-      // Si no existe, es el primer arranque: creamos el contenedor
-      console.log("Inicializando contenedor de datos global...");
+      // Si el contenedor no existe, intentamos crearlo con lo que tengamos localmente
       await fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,16 +34,15 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
       return localRecords;
     }
 
-    // 2. FUSIÓN TOTAL (MERGE ESTRATÉGICO)
-    // Usamos las cédulas como llave única para que no importe en qué dispositivo se creó
+    // MEZCLA DE DATOS (MERGE)
     const masterMap = new Map<string, VoteRecord>();
     
-    // Prioridad 1: Lo que ya está en la nube (votos de otros recolectores)
+    // 1. Cargar lo que viene de la nube (otros dispositivos)
     cloudRecords.forEach(r => {
       if (r && r.idNumber) masterMap.set(r.idNumber, r);
     });
     
-    // Prioridad 2: Lo que tengo yo localmente (votos nuevos que acabo de capturar)
+    // 2. Añadir lo que tengo yo localmente
     localRecords.forEach(r => {
       if (r && r.idNumber) masterMap.set(r.idNumber, r);
     });
@@ -49,12 +50,9 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
     const merged = Array.from(masterMap.values())
       .sort((a, b) => b.timestamp - a.timestamp);
 
-    // 3. ACTUALIZACIÓN INTELIGENTE
-    // Solo escribimos en la nube si nuestra mezcla tiene datos que la nube NO tenía
-    // O si la nube tiene datos que nosotros NO teníamos (para mantenernos al día)
-    if (merged.length > cloudRecords.length || (localRecords.length === 0 && cloudRecords.length > 0)) {
-      console.log(`Sincronizando: Nube(${cloudRecords.length}) vs Consolidado(${merged.length})`);
-      
+    // ACTUALIZACIÓN: Solo si el total consolidado es diferente a lo que había en la nube
+    // O si mi lista local estaba vacía (estoy inicializando el computador)
+    if (merged.length !== cloudRecords.length || (localRecords.length === 0 && merged.length > 0)) {
       await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +65,7 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
 
     return merged;
   } catch (error) {
-    console.error("Fallo de conexión con el Panel Central:", error);
+    console.error("Error de enlace:", error);
     return localRecords;
   }
 };
