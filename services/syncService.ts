@@ -2,18 +2,19 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// ID TOTALMENTE NUEVO PARA EVITAR CACHÉ ANTIGUO
-const CLOUD_OBJECT_ID = "paipa_v2_102_live"; 
-const STORAGE_NAME = "TRIANA_V2_SYNC";
+// ID de nivel profesional para asegurar persistencia global
+const CLOUD_OBJECT_ID = "triana-paipa-2024-v3"; 
+const STORAGE_NAME = "TRIANA_V3_MASTER";
 
 export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
   try {
-    // 1. FORZAR DESCARGA SIEMPRE (Cache-Busting Agresivo)
-    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}?nocache=${Date.now()}`, {
+    // 1. PETICIÓN CON ROMPE-CACHÉ TOTAL
+    const response = await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}?v=${Date.now()}`, {
       method: 'GET',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
     
@@ -23,7 +24,7 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
       const cloudData = await response.json();
       cloudRecords = cloudData.data?.records || [];
     } else if (response.status === 404) {
-      // Si no existe, lo creamos solo si tenemos algo local
+      // Si la nube está vacía, intentamos crearla con lo local
       if (localRecords.length > 0) {
         await fetch(API_BASE, {
           method: 'POST',
@@ -38,15 +39,15 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
       return localRecords;
     }
 
-    // 2. FUSIÓN INTELIGENTE (MERGE)
+    // 2. LÓGICA DE FUSIÓN DE EMERGENCIA
     const masterMap = new Map<string, VoteRecord>();
     
-    // Cargamos primero la nube (La Verdad Universal)
+    // Lo de la nube siempre manda si el computador está en blanco
     cloudRecords.forEach(r => {
       if (r && r.idNumber) masterMap.set(r.idNumber, r);
     });
     
-    // Cargamos lo local (Nuevas capturas)
+    // Añadimos lo local (nuevos registros del celular)
     localRecords.forEach(r => {
       if (r && r.idNumber) masterMap.set(r.idNumber, r);
     });
@@ -54,11 +55,11 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
     const merged = Array.from(masterMap.values())
       .sort((a, b) => b.timestamp - a.timestamp);
 
-    // 3. SOLO SUBIMOS SI HAY CAMBIOS REALES Y NO ESTAMOS VACÍOS INTENTANDO BORRAR LA NUBE
-    const hasNewData = merged.length > cloudRecords.length;
-    
-    if (hasNewData) {
-      console.log("Subiendo nuevos registros a la nube...");
+    // 3. ACTUALIZACIÓN FORZADA
+    // Si mi lista mezclada es más grande que la nube, subo.
+    // O si la nube tiene datos y mi local no, simplemente acepto lo de la nube.
+    if (merged.length > cloudRecords.length) {
+      console.log("Sincronizando nuevos datos hacia la nube...");
       await fetch(`${API_BASE}/${CLOUD_OBJECT_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -71,7 +72,7 @@ export const syncWithCloud = async (localRecords: VoteRecord[]): Promise<VoteRec
 
     return merged;
   } catch (error) {
-    console.error("Error en puente de datos:", error);
+    console.error("Falla de red crítica:", error);
     return localRecords;
   }
 };
