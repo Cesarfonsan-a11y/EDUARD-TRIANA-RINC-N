@@ -7,20 +7,21 @@ const DRIVE_KEY = "TRIANA_102_CAMPAÑA_OFICIAL_PRO_V3";
 let cachedObjectId: string | null = localStorage.getItem('v102_drive_id');
 
 /**
- * Sincronización con Google Sheets (Opcional si se configura la URL)
+ * Sincronización Push al Hub Central (Google Sheets)
  */
 export const syncToGoogleSheets = async (records: VoteRecord[], webAppUrl: string) => {
   if (!webAppUrl || !webAppUrl.startsWith('http')) return;
   try {
+    // Usamos POST para enviar la base completa al script
     await fetch(webAppUrl, {
       method: 'POST',
-      mode: 'no-cors', // Importante para Google Apps Script
+      mode: 'no-cors', 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(records)
     });
-    console.log("Datos enviados a Google Sheets");
+    console.debug("Data Hub Sync: Push exitoso");
   } catch (e) {
-    console.error("Error enviando a Google Sheets", e);
+    console.error("Data Hub Sync Error:", e);
   }
 };
 
@@ -55,6 +56,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
   try {
     let driveId = await getDriveId();
     
+    // Si no hay ID, intentamos crear el objeto central de sincronización
     if (!driveId) {
       if (localRecords.length === 0) return [];
       const response = await fetch(API_BASE, {
@@ -69,6 +71,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
         const data = await response.json();
         localStorage.setItem('v102_drive_id', data.id);
         cachedObjectId = data.id;
+        if (googleUrl) await syncToGoogleSheets(localRecords, googleUrl);
       }
       return localRecords;
     }
@@ -80,6 +83,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
     const cloudRecords: VoteRecord[] = driveObj.data?.records || [];
     const finalRecords = mergeData(localRecords, cloudRecords);
 
+    // Si hay datos nuevos (locales o remotos), actualizamos el Hub
     if (finalRecords.length > cloudRecords.length || localRecords.length > cloudRecords.length) {
       await fetch(`${API_BASE}/${driveId}`, {
         method: "PUT",
@@ -90,7 +94,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
         })
       });
 
-      // Si hay URL de Google Sheets, empujamos los datos allí también
+      // Sincronización final con el Hub Centralizado de Google
       if (googleUrl) {
         await syncToGoogleSheets(finalRecords, googleUrl);
       }
@@ -98,6 +102,7 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
 
     return finalRecords;
   } catch (error) {
+    console.error("Master Sync Failure:", error);
     return localRecords;
   }
 };
