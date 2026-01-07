@@ -6,8 +6,8 @@ export interface ActorNode {
   name: string;
   category: ActorCategory;
   description: string;
-  baseCount?: number; // Empleados directos + Dueños
-  val?: number; // for D3
+  baseCount?: number;
+  val?: number;
 }
 
 export type RelationType = 'PRIMARY_FLOW' | 'SECONDARY_FLOW' | 'VOTING_INFLUENCE';
@@ -26,13 +26,13 @@ export interface VoteRecord {
   idNumber: string;
   phoneNumber: string;
   timestamp: number;
+  recordedBy?: string; // Nombre del líder que hizo el registro
 }
 
-export interface ElectoralZone {
-  id: string;
-  name: string;
-  votePercentage: number;
-  workerDensity: number;
+export interface AppSettings {
+  googleSheetUrl: string;
+  leaderName: string;
+  isConfigured: boolean;
 }
 
 export interface AnalysisResponse {

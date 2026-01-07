@@ -2,17 +2,30 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// Clave única para que todos los celulares y computadores vean LO MISMO
-const DRIVE_KEY = "TRIANA_102_CAMPAÑA_OFICIAL_PRO";
+const DRIVE_KEY = "TRIANA_102_CAMPAÑA_OFICIAL_PRO_V3";
 
 let cachedObjectId: string | null = localStorage.getItem('v102_drive_id');
 
 /**
- * Busca el disco central en la nube
+ * Sincronización con Google Sheets (Opcional si se configura la URL)
  */
+export const syncToGoogleSheets = async (records: VoteRecord[], webAppUrl: string) => {
+  if (!webAppUrl || !webAppUrl.startsWith('http')) return;
+  try {
+    await fetch(webAppUrl, {
+      method: 'POST',
+      mode: 'no-cors', // Importante para Google Apps Script
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(records)
+    });
+    console.log("Datos enviados a Google Sheets");
+  } catch (e) {
+    console.error("Error enviando a Google Sheets", e);
+  }
+};
+
 const getDriveId = async (): Promise<string | null> => {
   if (cachedObjectId) return cachedObjectId;
-  
   try {
     const res = await fetch(`${API_BASE}?nocache=${Date.now()}`);
     if (!res.ok) return null;
@@ -29,30 +42,21 @@ const getDriveId = async (): Promise<string | null> => {
   }
 };
 
-/**
- * Lógica de Fusión (Como en Google Sheets)
- * Combina registros locales y de la nube sin borrar nada
- */
 const mergeData = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
   const all = [...local, ...remote];
   const unique = new Map<string, VoteRecord>();
   all.forEach(r => {
-    // Usamos la cédula como llave única para no duplicar personas
-    if (!unique.has(r.idNumber)) {
-      unique.set(r.idNumber, r);
-    }
+    if (!unique.has(r.idNumber)) unique.set(r.idNumber, r);
   });
   return Array.from(unique.values()).sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRecord[]> => {
+export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: string): Promise<VoteRecord[]> => {
   try {
     let driveId = await getDriveId();
     
-    // Si el disco no existe en internet, lo creamos por primera vez
     if (!driveId) {
       if (localRecords.length === 0) return [];
-      
       const response = await fetch(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,7 +65,6 @@ export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRec
           data: { records: localRecords, lastUpdate: new Date().toISOString() }
         })
       });
-      
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('v102_drive_id', data.id);
@@ -70,34 +73,31 @@ export const syncWithDrive = async (localRecords: VoteRecord[]): Promise<VoteRec
       return localRecords;
     }
 
-    // Si el disco existe, descargamos lo que tienen otros
     const driveRes = await fetch(`${API_BASE}/${driveId}?cb=${Date.now()}`);
     if (!driveRes.ok) return localRecords;
 
     const driveObj = await driveRes.json();
     const cloudRecords: VoteRecord[] = driveObj.data?.records || [];
-    
-    // FUSIONAMOS: Local + Nube
     const finalRecords = mergeData(localRecords, cloudRecords);
 
-    // Si hay datos nuevos tras la fusión, actualizamos el disco central
     if (finalRecords.length > cloudRecords.length || localRecords.length > cloudRecords.length) {
       await fetch(`${API_BASE}/${driveId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: DRIVE_KEY,
-          data: { 
-            records: finalRecords, 
-            lastUpdate: new Date().toISOString() 
-          }
+          data: { records: finalRecords, lastUpdate: new Date().toISOString() }
         })
       });
+
+      // Si hay URL de Google Sheets, empujamos los datos allí también
+      if (googleUrl) {
+        await syncToGoogleSheets(finalRecords, googleUrl);
+      }
     }
 
     return finalRecords;
   } catch (error) {
-    console.error("Error de conexión con la Nube Triana:", error);
     return localRecords;
   }
 };

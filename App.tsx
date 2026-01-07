@@ -12,11 +12,16 @@ import DatabaseView from './components/DatabaseView.tsx';
 import { syncWithDrive } from './services/syncService.ts';
 
 const App: React.FC = () => {
+  // URL Proporcionada por el usuario integrada como default
+  const DEFAULT_GOOGLE_URL = "https://script.google.com/macros/s/AKfycbzjNPsSK1gD1e2ZxVQbRV1gt9aB-hPXHcHyXc_XIXpbd2vMOYdBWFvtISlS0YyAFDCZ5Q/exec";
+
   const [voteRecords, setVoteRecords] = useState<VoteRecord[]>(() => {
     const saved = localStorage.getItem('triana_v102_drive_local');
     return saved ? JSON.parse(saved) : [];
   });
   
+  const [leaderName, setLeaderName] = useState(() => localStorage.getItem('v102_leader_name') || '');
+  const [googleSheetUrl, setGoogleSheetUrl] = useState(() => localStorage.getItem('v102_google_url') || DEFAULT_GOOGLE_URL);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<string>('--:--');
   const [viewMode, setViewMode] = useState<'network' | 'participation' | 'database'>('network');
@@ -28,11 +33,19 @@ const App: React.FC = () => {
     localStorage.setItem('triana_v102_drive_local', JSON.stringify(voteRecords));
   }, [voteRecords]);
 
+  useEffect(() => {
+    localStorage.setItem('v102_leader_name', leaderName);
+  }, [leaderName]);
+
+  useEffect(() => {
+    localStorage.setItem('v102_google_url', googleSheetUrl);
+  }, [googleSheetUrl]);
+
   const performDriveSync = useCallback(async (currentData?: VoteRecord[]) => {
     const dataToSync = currentData || voteRecords;
     setSyncState('syncing');
     try {
-      const merged = await syncWithDrive(dataToSync);
+      const merged = await syncWithDrive(dataToSync, googleSheetUrl);
       if (JSON.stringify(merged) !== JSON.stringify(voteRecords)) {
         setVoteRecords(merged);
       }
@@ -41,20 +54,25 @@ const App: React.FC = () => {
     } catch (e) {
       setSyncState('error');
     }
-  }, [voteRecords]);
+  }, [voteRecords, googleSheetUrl]);
 
   useEffect(() => {
     performDriveSync();
-    const interval = setInterval(() => performDriveSync(), 5000);
+    const interval = setInterval(() => performDriveSync(), 6000);
     return () => clearInterval(interval);
   }, [performDriveSync]);
 
   const handleAddVoteRecord = async (record: Omit<VoteRecord, 'id' | 'timestamp'>) => {
     if (voteRecords.some(r => r.idNumber === record.idNumber)) {
-      alert("⚠️ Esta cédula ya fue registrada por otro líder.");
+      alert("⚠️ Esta cédula ya fue registrada.");
       return;
     }
-    const newEntry: VoteRecord = { ...record, id: `v102-${Date.now()}`, timestamp: Date.now() };
+    const newEntry: VoteRecord = { 
+      ...record, 
+      id: `v102-${Date.now()}`, 
+      timestamp: Date.now(),
+      recordedBy: leaderName || 'Admin'
+    };
     const updatedRecords = [newEntry, ...voteRecords];
     setVoteRecords(updatedRecords);
     setLastRecord(newEntry);
@@ -73,6 +91,42 @@ const App: React.FC = () => {
       setAdminPasscode('');
     } else if (newPass.length >= 3) setAdminPasscode('');
   };
+
+  // PANTALLA DE REGISTRO INICIAL DE LÍDER (RECOLECTOR)
+  if (isCollectorViewActive && !leaderName) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+        <div className="bg-slate-900 border border-blue-500/30 rounded-[3rem] p-10 w-full max-w-sm text-center space-y-8 shadow-2xl">
+          <div className="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center border-4 border-white/10 shadow-lg">
+            <i className="fa-solid fa-user-tie text-3xl text-white"></i>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Identificación Líder</h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Ingrese su nombre para reportar al Drive Central</p>
+          </div>
+          <input 
+            type="text" 
+            placeholder="Escriba su nombre..." 
+            className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-5 text-center text-white focus:border-blue-500 outline-none uppercase font-black"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                setLeaderName(e.currentTarget.value.trim());
+              }
+            }}
+          />
+          <button 
+            onClick={(e) => {
+              const input = e.currentTarget.previousSibling as HTMLInputElement;
+              if (input.value.trim()) setLeaderName(input.value.trim());
+            }}
+            className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl active:scale-95"
+          >
+            Empezar a Recolectar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isCollectorViewActive) {
     return (
@@ -96,7 +150,7 @@ const App: React.FC = () => {
           <header className="text-center space-y-3">
              <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border bg-blue-900/20 border-blue-400/30 text-white">
                 <i className={`fa-solid fa-cloud ${syncState === 'syncing' ? 'fa-beat' : ''} text-blue-400`}></i>
-                <span className="text-[9px] font-black uppercase tracking-widest">NUBE TRIANA: {voteRecords.length}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">DRIVE: {leaderName.toUpperCase()}</span>
              </div>
              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">TRIANA <span className="text-amber-400">102</span></h1>
           </header>
@@ -157,7 +211,13 @@ const App: React.FC = () => {
             <div className="h-[550px]">
                {viewMode === 'network' ? <NetworkGraph nodes={ACTORS} links={RELATIONS} onNodeClick={setSelectedActor} /> :
                 viewMode === 'participation' ? <ElectoralView records={voteRecords} actors={ACTORS} /> :
-                <DatabaseView records={voteRecords} actors={ACTORS} onDeleteRecord={id => setVoteRecords(prev => prev.filter(v => v.id !== id))} />}
+                <DatabaseView 
+                  records={voteRecords} 
+                  actors={ACTORS} 
+                  onDeleteRecord={id => setVoteRecords(prev => prev.filter(v => v.id !== id))} 
+                  googleSheetUrl={googleSheetUrl}
+                  onSetGoogleSheetUrl={setGoogleSheetUrl}
+                />}
             </div>
           </div>
         </div>
@@ -166,10 +226,12 @@ const App: React.FC = () => {
           
           <div className="bg-slate-900/60 p-8 rounded-[2.5rem] border border-slate-800 text-center space-y-3">
              <div className="flex items-center justify-center gap-2 mb-2">
-                <i className="fa-solid fa-shield-halved text-emerald-500"></i>
-                <span className="text-[9px] font-black text-white uppercase tracking-widest">RESPALDO EN NUBE SEGURO</span>
+                <i className={`fa-solid ${googleSheetUrl ? 'fa-link text-blue-400' : 'fa-shield-halved text-emerald-500'}`}></i>
+                <span className="text-[9px] font-black text-white uppercase tracking-widest">
+                  {googleSheetUrl ? 'SINCRO DRIVE GOOGLE OK' : 'RESPALDO EN NUBE SEGURO'}
+                </span>
              </div>
-             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Última Sync: {lastSyncTime}</p>
+             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Sync: {lastSyncTime}</p>
           </div>
         </aside>
       </div>
