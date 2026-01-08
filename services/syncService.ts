@@ -2,10 +2,10 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// CLAVE ÚNICA GLOBAL: Esto asegura que PC y Celulares vean lo mismo
-const DRIVE_KEY = "MASTER_HUB_TRIANA_102_PAIPA_PRO_V3";
+// IDENTIFICADOR ÚNICO PARA LA BASE DE DATOS DEL PROYECTO PAIPA 102
+const DRIVE_KEY = "MASTER_DATABASE_TRIANA_102_PAIPA_V4";
 
-let cachedObjectId: string | null = localStorage.getItem('v102_drive_id');
+let cachedObjectId: string | null = localStorage.getItem('v102_db_id');
 
 export const syncToGoogleSheets = async (records: VoteRecord[], webAppUrl: string) => {
   if (!webAppUrl || !webAppUrl.startsWith('http')) return;
@@ -17,21 +17,21 @@ export const syncToGoogleSheets = async (records: VoteRecord[], webAppUrl: strin
       body: JSON.stringify(records)
     });
   } catch (e) {
-    console.error("Google Hub Sync Error:", e);
+    console.error("Backup Sync Error:", e);
   }
 };
 
-const getDriveId = async (): Promise<string | null> => {
+const getDatabaseId = async (): Promise<string | null> => {
   if (cachedObjectId) return cachedObjectId;
   try {
     const res = await fetch(`${API_BASE}?nocache=${Date.now()}`);
     if (!res.ok) return null;
     const items = await res.json();
-    const drive = items.find((i: any) => i.name === DRIVE_KEY);
-    if (drive) {
-      localStorage.setItem('v102_drive_id', drive.id);
-      cachedObjectId = drive.id;
-      return drive.id;
+    const db = items.find((i: any) => i.name === DRIVE_KEY);
+    if (db) {
+      localStorage.setItem('v102_db_id', db.id);
+      cachedObjectId = db.id;
+      return db.id;
     }
     return null;
   } catch (e) {
@@ -39,22 +39,29 @@ const getDriveId = async (): Promise<string | null> => {
   }
 };
 
-const mergeData = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
+const mergeAndDeduplicate = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
   const all = [...local, ...remote];
   const unique = new Map<string, VoteRecord>();
+  
+  // Priorizamos registros más recientes o con estado 'synced'
   all.forEach(r => {
-    // La cédula es la clave de unicidad para el Hub Central
-    if (!unique.has(r.idNumber)) unique.set(r.idNumber, r);
+    const existing = unique.get(r.idNumber);
+    if (!existing || r.timestamp > existing.timestamp) {
+      unique.set(r.idNumber, { ...r, syncStatus: 'synced' });
+    }
   });
+  
   return Array.from(unique.values()).sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: string): Promise<VoteRecord[]> => {
+export const syncWithCloudDatabase = async (localRecords: VoteRecord[], googleUrl?: string): Promise<{records: VoteRecord[], latency: number}> => {
+  const startTime = Date.now();
   try {
-    let driveId = await getDriveId();
+    let dbId = await getDatabaseId();
     
-    if (!driveId) {
-      if (localRecords.length === 0) return [];
+    // Si la base de datos no existe en la nube, la creamos
+    if (!dbId) {
+      if (localRecords.length === 0) return { records: [], latency: 0 };
       const response = await fetch(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,30 +70,27 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
           data: { records: localRecords, lastUpdate: new Date().toISOString() }
         })
       });
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('v102_drive_id', data.id);
-        cachedObjectId = data.id;
-        if (googleUrl) await syncToGoogleSheets(localRecords, googleUrl);
-      }
-      return localRecords;
+      const data = await response.json();
+      localStorage.setItem('v102_db_id', data.id);
+      cachedObjectId = data.id;
+      return { records: localRecords, latency: Date.now() - startTime };
     }
 
-    const driveRes = await fetch(`${API_BASE}/${driveId}?cb=${Date.now()}`);
-    if (!driveRes.ok) {
-      // Si el objeto fue borrado del servidor, reseteamos el ID local
-      localStorage.removeItem('v102_drive_id');
+    // Leemos la base de datos actual de la nube
+    const dbRes = await fetch(`${API_BASE}/${dbId}?cb=${Date.now()}`);
+    if (!dbRes.ok) {
+      localStorage.removeItem('v102_db_id');
       cachedObjectId = null;
-      return localRecords;
+      return { records: localRecords, latency: Date.now() - startTime };
     }
 
-    const driveObj = await driveRes.json();
-    const cloudRecords: VoteRecord[] = driveObj.data?.records || [];
-    const finalRecords = mergeData(localRecords, cloudRecords);
+    const dbObj = await dbRes.json();
+    const cloudRecords: VoteRecord[] = dbObj.data?.records || [];
+    const finalRecords = mergeAndDeduplicate(localRecords, cloudRecords);
 
-    // Si hay discrepancia, actualizamos el Hub Global
+    // Actualizamos la nube solo si hay cambios significativos
     if (finalRecords.length !== cloudRecords.length) {
-      await fetch(`${API_BASE}/${driveId}`, {
+      await fetch(`${API_BASE}/${dbId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -100,9 +104,9 @@ export const syncWithDrive = async (localRecords: VoteRecord[], googleUrl?: stri
       }
     }
 
-    return finalRecords;
+    return { records: finalRecords, latency: Date.now() - startTime };
   } catch (error) {
-    console.error("Critical Sync Failure:", error);
-    return localRecords;
+    console.error("Cloud Database Failure:", error);
+    return { records: localRecords, latency: -1 };
   }
 };

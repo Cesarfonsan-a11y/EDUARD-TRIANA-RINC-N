@@ -9,178 +9,175 @@ interface Props {
   onDeleteRecord: (id: string) => void;
   googleSheetUrl: string;
   onSetGoogleSheetUrl: (url: string) => void;
+  latency: number;
 }
 
-const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, googleSheetUrl, onSetGoogleSheetUrl }) => {
+const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, googleSheetUrl, onSetGoogleSheetUrl, latency }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showConfig, setShowConfig] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
   const [tempUrl, setTempUrl] = useState(googleSheetUrl);
 
   const filteredRecords = useMemo(() => {
     return records.filter(r => 
       r.voterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.idNumber.includes(searchTerm) ||
-      actors.find(a => a.id === r.actorId)?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      r.idNumber.includes(searchTerm)
     );
-  }, [records, searchTerm, actors]);
+  }, [records, searchTerm]);
+
+  const stats = useMemo(() => {
+    const today = new Date().setHours(0,0,0,0);
+    return {
+      total: records.length,
+      today: records.filter(r => r.timestamp >= today).length,
+      sectors: new Set(records.map(r => r.actorId)).size
+    };
+  }, [records]);
 
   const handleExportExcel = () => {
     if (records.length === 0) return;
     const data = records.map(r => ({
-      'Cédula': r.idNumber,
-      'Nombre': r.voterName,
-      'Celular': r.phoneNumber,
-      'Sector': actors.find(a => a.id === r.actorId)?.name,
-      'Líder': r.recordedBy || 'Admin',
-      'Fecha': new Date(r.timestamp).toLocaleString()
+      'CÉDULA': r.idNumber,
+      'CIUDADANO': r.voterName.toUpperCase(),
+      'TELÉFONO': r.phoneNumber,
+      'SECTOR ESTRATÉGICO': actors.find(a => a.id === r.actorId)?.name || 'General',
+      'REGISTRADO POR': r.recordedBy || 'ADMIN',
+      'FECHA DE REGISTRO': new Date(r.timestamp).toLocaleString()
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Drive_102_Central");
-    XLSX.writeFile(wb, `Drive_Triana_102_Export_${Date.now()}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "DATABASE_MASTER_102");
+    XLSX.writeFile(wb, `DB_TRIANA_102_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   return (
-    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 h-[450px] flex flex-col overflow-hidden relative">
-      
-      {/* PANEL DE CONFIGURACIÓN DRIVE */}
-      {showConfig && (
-        <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-xl p-6 flex flex-col justify-center animate-in fade-in zoom-in duration-300">
-          <button onClick={() => setShowConfig(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white"><i className="fa-solid fa-times text-2xl"></i></button>
-          
-          <div className="max-w-md mx-auto w-full space-y-6">
-            {!showGuide ? (
-              <>
-                <div className="text-center space-y-2">
-                   <div className="w-16 h-16 bg-blue-600/20 rounded-2xl mx-auto flex items-center justify-center border border-blue-500/30 mb-4">
-                      <i className="fa-brands fa-google-drive text-3xl text-blue-400"></i>
-                   </div>
-                   <h3 className="text-xl font-black text-white uppercase italic">Sincronizar con Google Sheets</h3>
-                   <p className="text-[10px] text-slate-400 uppercase tracking-widest leading-relaxed px-4">Conecta tu propia hoja de cálculo para tener respaldo total en tiempo real.</p>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest ml-1">URL de Aplicación Web (Google Script)</label>
-                  <input 
-                    type="text" 
-                    value={tempUrl} 
-                    onChange={e => setTempUrl(e.target.value)} 
-                    placeholder="https://script.google.com/macros/s/..." 
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-[10px] text-blue-400 focus:border-blue-500 outline-none font-mono"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setShowGuide(true)}
-                    className="bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-2"
-                  >
-                    <i className="fa-solid fa-circle-question"></i> ¿Cómo obtenerla?
-                  </button>
-                  <button 
-                    onClick={() => { onSetGoogleSheetUrl(tempUrl); setShowConfig(false); }}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-2"
-                  >
-                    <i className="fa-solid fa-link"></i> Vincular Ahora
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4 animate-in slide-in-from-bottom duration-300">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <h4 className="text-xs font-black text-amber-400 uppercase italic">Guía Paso a Paso</h4>
-                  <button onClick={() => setShowGuide(false)} className="text-[9px] font-black text-slate-500 uppercase">Volver</button>
-                </div>
-                <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                  {[
-                    "1. En tu Google Sheet ve a 'Extensiones' > 'Apps Script'",
-                    "2. Pega el código proporcionado.",
-                    "3. Clic en botón azul 'Implementar' > 'Nueva implementación'",
-                    "4. Clic en el ENGRANAJE ⚙️ y elige 'APLICACIÓN WEB'",
-                    "5. En 'Quién tiene acceso' pon 'CUALQUIERA'",
-                    "6. Al autorizar, clic en 'ADVANCED' y luego en 'GO TO... (UNSAFE)' para permitir el acceso.",
-                    "7. Clic en 'Implementar' y COPIA la URL resultante."
-                  ].map((step, i) => (
-                    <div key={i} className="flex gap-3 items-start bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                      <span className="bg-amber-400 text-blue-900 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</span>
-                      <p className="text-[10px] text-slate-300 font-bold leading-relaxed">{step}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+    <div className="bg-slate-900/40 p-0 rounded-3xl border border-slate-800 h-[550px] flex flex-col overflow-hidden">
+      {/* HEADER DE BASE DE DATOS */}
+      <div className="bg-slate-950/80 p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
-            <i className="fa-solid fa-table-list text-white text-xl"></i>
+          <div className="relative">
+            <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
+              <i className="fa-solid fa-server text-blue-400 text-xl"></i>
+            </div>
+            <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-950 flex items-center justify-center ${latency > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full bg-white ${latency > 0 ? 'animate-pulse' : ''}`}></div>
+            </div>
           </div>
           <div>
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Drive Console</h3>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em]">Gestión de Activos Electorales</p>
+            <h3 className="text-white font-black uppercase text-sm italic tracking-widest">Base de Datos Centralizada</h3>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              <span>Estado: {latency > 0 ? 'Conectado' : 'Sin Conexión'}</span>
+              <span className="text-slate-700">•</span>
+              <span className={latency > 300 ? 'text-amber-500' : 'text-emerald-500'}>{latency > 0 ? `${latency}ms` : '--'}</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-3 w-full md:w-auto">
-          <button 
-            onClick={() => setShowConfig(true)}
-            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest shadow-lg ${googleSheetUrl ? 'bg-blue-900/50 text-blue-400 border border-blue-400/30' : 'bg-slate-800 text-slate-500 border border-transparent'}`}
-          >
-            <i className={`fa-brands fa-google-drive ${googleSheetUrl ? 'fa-beat-slow' : ''}`}></i> 
-            {googleSheetUrl ? 'GOOGLE SHEET: ACTIVO' : 'VINCULAR DRIVE'}
-          </button>
-          <button 
-            onClick={handleExportExcel}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest shadow-lg"
-          >
-            <i className="fa-solid fa-download"></i> EXCEL
-          </button>
+        <div className="flex items-center gap-3">
+           <input 
+            type="text" 
+            placeholder="BUSCAR EN LA BASE..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-[10px] text-white focus:border-blue-500 outline-none w-48 font-black uppercase tracking-widest"
+           />
+           <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+             <i className="fa-solid fa-file-excel"></i> EXPORTAR
+           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto custom-scrollbar border border-slate-800 rounded-2xl bg-slate-950/30">
-        <table className="w-full text-left text-[10px] uppercase font-bold border-collapse">
-          <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-md text-slate-500 z-10">
+      {/* MINI STATS */}
+      <div className="grid grid-cols-3 bg-slate-900/20 border-b border-slate-800/50">
+        <div className="p-3 text-center border-r border-slate-800/50">
+          <p className="text-[8px] font-black text-slate-600 uppercase">Total Registros</p>
+          <p className="text-lg font-black text-white">{stats.total}</p>
+        </div>
+        <div className="p-3 text-center border-r border-slate-800/50">
+          <p className="text-[8px] font-black text-slate-600 uppercase">Ingresos Hoy</p>
+          <p className="text-lg font-black text-blue-400">{stats.today}</p>
+        </div>
+        <div className="p-3 text-center">
+          <p className="text-[8px] font-black text-slate-600 uppercase">Sectores Activos</p>
+          <p className="text-lg font-black text-amber-400">{stats.sectors}</p>
+        </div>
+      </div>
+
+      {/* TABLA DE DATOS */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/20">
+        <table className="w-full text-left text-[11px] font-bold">
+          <thead className="sticky top-0 bg-slate-900/95 backdrop-blur-md text-slate-500 border-b border-slate-800 z-10">
             <tr>
-              <th className="p-4 border-b border-slate-800 tracking-widest">Líder</th>
-              <th className="p-4 border-b border-slate-800 tracking-widest">ID Cédula</th>
-              <th className="p-4 border-b border-slate-800 tracking-widest">Ciudadano</th>
-              <th className="p-4 border-b border-slate-800 tracking-widest">Sector</th>
-              <th className="p-4 border-b border-slate-800 text-right tracking-widest">Control</th>
+              <th className="px-6 py-4 uppercase tracking-widest">Ciudadano</th>
+              <th className="px-6 py-4 uppercase tracking-widest">Identificación</th>
+              <th className="px-6 py-4 uppercase tracking-widest">Líder Captor</th>
+              <th className="px-6 py-4 uppercase tracking-widest">Sector</th>
+              <th className="px-6 py-4 text-right uppercase tracking-widest">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/30">
-            {filteredRecords.map((r) => (
-              <tr key={r.id} className="hover:bg-white/5 group transition-colors">
-                <td className="p-4">
-                  <span className="text-blue-400">{r.recordedBy || 'Admin'}</span>
+          <tbody className="divide-y divide-slate-800/40">
+            {filteredRecords.map(r => (
+              <tr key={r.id} className="hover:bg-blue-500/5 group transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs text-white uppercase font-black">
+                      {r.voterName.charAt(0)}
+                    </div>
+                    <span className="text-white font-black uppercase tracking-tight">{r.voterName}</span>
+                  </div>
                 </td>
-                <td className="p-4 font-mono text-slate-400">{r.idNumber}</td>
-                <td className="p-4 text-white">{r.voterName}</td>
-                <td className="p-4 text-slate-500">
-                  {actors.find(a => a.id === r.actorId)?.name.split(' ')[1]}
+                <td className="px-6 py-4 font-mono text-slate-400">{r.idNumber}</td>
+                <td className="px-6 py-4 italic text-blue-400">{r.recordedBy || 'Admin'}</td>
+                <td className="px-6 py-4">
+                   <span className="px-2 py-1 bg-slate-900 rounded text-[9px] text-slate-500 border border-slate-800">
+                    {actors.find(a => a.id === r.actorId)?.name.split(' ')[1] || 'S/A'}
+                   </span>
                 </td>
-                <td className="p-4 text-right">
-                  <button onClick={() => onDeleteRecord(r.id)} className="text-slate-800 hover:text-red-500 transition-all p-2 bg-slate-900/50 rounded-lg">
+                <td className="px-6 py-4 text-right">
+                  <button onClick={() => onDeleteRecord(r.id)} className="text-slate-700 hover:text-red-500 transition-all p-2">
                     <i className="fa-solid fa-trash-can"></i>
                   </button>
                 </td>
               </tr>
             ))}
-            {filteredRecords.length === 0 && (
-              <tr>
-                <td colSpan={5} className="p-20 text-center text-slate-600 italic uppercase tracking-widest">
-                  No hay registros en el Drive Central
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+        {filteredRecords.length === 0 && (
+          <div className="p-20 text-center flex flex-col items-center gap-4">
+             <i className="fa-solid fa-database text-4xl text-slate-800"></i>
+             <p className="text-slate-600 font-black uppercase text-xs tracking-[0.3em]">No se encontraron registros en el Hub</p>
+          </div>
+        )}
       </div>
+
+      {/* FOOTER DE ESTADO */}
+      <div className="bg-slate-900/50 p-4 border-t border-slate-800 flex justify-between items-center">
+         <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Base de Datos Operativa • Boyacá 102</span>
+         </div>
+         <button onClick={() => setShowConfig(true)} className="text-[9px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2 hover:text-blue-300">
+           <i className="fa-solid fa-gears"></i> Parámetros de Red
+         </button>
+      </div>
+
+      {showConfig && (
+        <div className="absolute inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl p-8 flex flex-col justify-center items-center text-center">
+           <div className="max-w-xs w-full space-y-6">
+              <h3 className="text-white font-black uppercase text-sm italic tracking-widest">Enlace de Respaldo</h3>
+              <input 
+                type="text" 
+                value={tempUrl} 
+                onChange={e => setTempUrl(e.target.value)}
+                placeholder="Google App Script URL..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-[10px] text-blue-400 font-mono outline-none"
+              />
+              <div className="flex gap-2">
+                <button onClick={() => setShowConfig(false)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase">Cancelar</button>
+                <button onClick={() => {onSetGoogleSheetUrl(tempUrl); setShowConfig(false);}} className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase">Guardar</button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

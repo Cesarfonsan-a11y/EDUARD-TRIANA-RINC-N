@@ -26,7 +26,15 @@ export interface VoteRecord {
   idNumber: string;
   phoneNumber: string;
   timestamp: number;
-  recordedBy?: string; // Nombre del líder que hizo el registro
+  recordedBy?: string;
+  syncStatus?: 'synced' | 'pending' | 'error';
+}
+
+export interface DatabaseStats {
+  totalRecords: number;
+  lastUpdate: number;
+  serverStatus: 'online' | 'offline' | 'syncing';
+  latency: number;
 }
 
 export interface AppSettings {
