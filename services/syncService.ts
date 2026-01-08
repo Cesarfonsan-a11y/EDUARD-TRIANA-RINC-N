@@ -2,7 +2,7 @@
 import { VoteRecord } from "../types";
 
 const API_BASE = "https://api.restful-api.dev/objects";
-// IDENTIFICADOR ÚNICO PARA LA BASE DE DATOS DEL PROYECTO PAIPA 102
+// IDENTIFICADOR ÚNICO GLOBAL - DEBE SER EL MISMO PARA TODOS LOS DISPOSITIVOS
 const DRIVE_KEY = "MASTER_DATABASE_TRIANA_102_PAIPA_V4";
 
 let cachedObjectId: string | null = localStorage.getItem('v102_db_id');
@@ -22,29 +22,35 @@ export const syncToGoogleSheets = async (records: VoteRecord[], webAppUrl: strin
 };
 
 const getDatabaseId = async (): Promise<string | null> => {
-  if (cachedObjectId) return cachedObjectId;
+  // Siempre intentamos buscar primero para asegurar que estamos en la misma rama que otros dispositivos
   try {
     const res = await fetch(`${API_BASE}?nocache=${Date.now()}`);
-    if (!res.ok) return null;
+    if (!res.ok) return cachedObjectId;
     const items = await res.json();
+    
+    // Buscamos el objeto global por nombre
     const db = items.find((i: any) => i.name === DRIVE_KEY);
     if (db) {
       localStorage.setItem('v102_db_id', db.id);
       cachedObjectId = db.id;
       return db.id;
     }
-    return null;
+    return cachedObjectId;
   } catch (e) {
-    return null;
+    return cachedObjectId;
   }
 };
 
 const mergeAndDeduplicate = (local: VoteRecord[], remote: VoteRecord[]): VoteRecord[] => {
-  const all = [...local, ...remote];
   const unique = new Map<string, VoteRecord>();
   
-  // Priorizamos registros más recientes o con estado 'synced'
-  all.forEach(r => {
+  // Procesamos remotos primero (la verdad de la nube)
+  remote.forEach(r => {
+    unique.set(r.idNumber, { ...r, syncStatus: 'synced' });
+  });
+
+  // Procesamos locales, sobrescribiendo solo si el timestamp es más reciente
+  local.forEach(r => {
     const existing = unique.get(r.idNumber);
     if (!existing || r.timestamp > existing.timestamp) {
       unique.set(r.idNumber, { ...r, syncStatus: 'synced' });
@@ -54,14 +60,16 @@ const mergeAndDeduplicate = (local: VoteRecord[], remote: VoteRecord[]): VoteRec
   return Array.from(unique.values()).sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export const syncWithCloudDatabase = async (localRecords: VoteRecord[], googleUrl?: string): Promise<{records: VoteRecord[], latency: number}> => {
+export const syncWithCloudDatabase = async (localRecords: VoteRecord[], googleUrl?: string): Promise<{records: VoteRecord[], latency: number, changed: boolean}> => {
   const startTime = Date.now();
+  let changed = false;
+
   try {
     let dbId = await getDatabaseId();
     
-    // Si la base de datos no existe en la nube, la creamos
+    // Si la base de datos no existe en absoluto en la nube
     if (!dbId) {
-      if (localRecords.length === 0) return { records: [], latency: 0 };
+      if (localRecords.length === 0) return { records: [], latency: 0, changed: false };
       const response = await fetch(API_BASE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,40 +81,50 @@ export const syncWithCloudDatabase = async (localRecords: VoteRecord[], googleUr
       const data = await response.json();
       localStorage.setItem('v102_db_id', data.id);
       cachedObjectId = data.id;
-      return { records: localRecords, latency: Date.now() - startTime };
+      return { records: localRecords, latency: Date.now() - startTime, changed: true };
     }
 
-    // Leemos la base de datos actual de la nube
+    // Traer data de la nube
     const dbRes = await fetch(`${API_BASE}/${dbId}?cb=${Date.now()}`);
-    if (!dbRes.ok) {
-      localStorage.removeItem('v102_db_id');
-      cachedObjectId = null;
-      return { records: localRecords, latency: Date.now() - startTime };
-    }
+    if (!dbRes.ok) throw new Error("Cloud fetch failed");
 
     const dbObj = await dbRes.json();
     const cloudRecords: VoteRecord[] = dbObj.data?.records || [];
-    const finalRecords = mergeAndDeduplicate(localRecords, cloudRecords);
+    
+    // Merge inteligente
+    const mergedRecords = mergeAndDeduplicate(localRecords, cloudRecords);
 
-    // Actualizamos la nube solo si hay cambios significativos
-    if (finalRecords.length !== cloudRecords.length) {
+    // Verificamos si hay diferencias reales comparando el contenido JSON
+    const localHash = JSON.stringify(localRecords.map(r => r.idNumber).sort());
+    const cloudHash = JSON.stringify(cloudRecords.map(r => r.idNumber).sort());
+    const finalHash = JSON.stringify(mergedRecords.map(r => r.idNumber).sort());
+
+    // Si el resultado del merge es diferente a lo que hay en la nube, actualizamos la nube
+    if (finalHash !== cloudHash) {
       await fetch(`${API_BASE}/${dbId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: DRIVE_KEY,
-          data: { records: finalRecords, lastUpdate: new Date().toISOString() }
+          data: { records: mergedRecords, lastUpdate: new Date().toISOString() }
         })
       });
-
-      if (googleUrl) {
-        await syncToGoogleSheets(finalRecords, googleUrl);
-      }
+      changed = true;
+      if (googleUrl) await syncToGoogleSheets(mergedRecords, googleUrl);
     }
 
-    return { records: finalRecords, latency: Date.now() - startTime };
+    // Si el resultado es diferente a lo que teníamos localmente, informamos a la UI
+    if (finalHash !== localHash) {
+      changed = true;
+    }
+
+    return { 
+      records: mergedRecords, 
+      latency: Date.now() - startTime, 
+      changed 
+    };
   } catch (error) {
-    console.error("Cloud Database Failure:", error);
-    return { records: localRecords, latency: -1 };
+    console.error("CRITICAL SYNC ERROR:", error);
+    return { records: localRecords, latency: -1, changed: false };
   }
 };

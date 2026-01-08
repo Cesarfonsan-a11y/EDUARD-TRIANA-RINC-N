@@ -17,6 +17,8 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
   const [showConfig, setShowConfig] = useState(false);
   const [tempUrl, setTempUrl] = useState(googleSheetUrl);
 
+  const dbId = localStorage.getItem('v102_db_id');
+
   const filteredRecords = useMemo(() => {
     return records.filter(r => 
       r.voterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,6 +51,14 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
     XLSX.writeFile(wb, `DB_TRIANA_102_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  const handleInspectCloud = () => {
+    if (dbId) {
+      window.open(`https://api.restful-api.dev/objects/${dbId}`, '_blank');
+    } else {
+      alert("⚠️ El ID de la nube aún no ha sido generado. Añada un registro primero.");
+    }
+  };
+
   return (
     <div className="bg-slate-900/40 p-0 rounded-3xl border border-slate-800 h-[550px] flex flex-col overflow-hidden">
       {/* HEADER DE BASE DE DATOS */}
@@ -63,9 +73,9 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
             </div>
           </div>
           <div>
-            <h3 className="text-white font-black uppercase text-sm italic tracking-widest">Base de Datos Centralizada</h3>
+            <h3 className="text-white font-black uppercase text-sm italic tracking-widest">MASTER_DATABASE_V4</h3>
             <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              <span>Estado: {latency > 0 ? 'Conectado' : 'Sin Conexión'}</span>
+              <span>Cloud ID: {dbId ? `${dbId.substring(0,8)}...` : 'Sincronizando'}</span>
               <span className="text-slate-700">•</span>
               <span className={latency > 300 ? 'text-amber-500' : 'text-emerald-500'}>{latency > 0 ? `${latency}ms` : '--'}</span>
             </div>
@@ -75,11 +85,14 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
         <div className="flex items-center gap-3">
            <input 
             type="text" 
-            placeholder="BUSCAR EN LA BASE..." 
+            placeholder="BUSCAR EN EL HUB..." 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-[10px] text-white focus:border-blue-500 outline-none w-48 font-black uppercase tracking-widest"
            />
+           <button onClick={handleInspectCloud} title="Inspeccionar Datos Crudos" className="bg-slate-800 hover:bg-slate-700 text-blue-400 w-10 h-10 rounded-xl transition-all flex items-center justify-center border border-slate-700">
+             <i className="fa-solid fa-eye"></i>
+           </button>
            <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
              <i className="fa-solid fa-file-excel"></i> EXPORTAR
            </button>
@@ -89,7 +102,7 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
       {/* MINI STATS */}
       <div className="grid grid-cols-3 bg-slate-900/20 border-b border-slate-800/50">
         <div className="p-3 text-center border-r border-slate-800/50">
-          <p className="text-[8px] font-black text-slate-600 uppercase">Total Registros</p>
+          <p className="text-[8px] font-black text-slate-600 uppercase">Total Hub</p>
           <p className="text-lg font-black text-white">{stats.total}</p>
         </div>
         <div className="p-3 text-center border-r border-slate-800/50">
@@ -97,7 +110,7 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
           <p className="text-lg font-black text-blue-400">{stats.today}</p>
         </div>
         <div className="p-3 text-center">
-          <p className="text-[8px] font-black text-slate-600 uppercase">Sectores Activos</p>
+          <p className="text-[8px] font-black text-slate-600 uppercase">Sectores Conectados</p>
           <p className="text-lg font-black text-amber-400">{stats.sectors}</p>
         </div>
       </div>
@@ -143,8 +156,8 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
         </table>
         {filteredRecords.length === 0 && (
           <div className="p-20 text-center flex flex-col items-center gap-4">
-             <i className="fa-solid fa-database text-4xl text-slate-800"></i>
-             <p className="text-slate-600 font-black uppercase text-xs tracking-[0.3em]">No se encontraron registros en el Hub</p>
+             <i className="fa-solid fa-satellite-dish text-4xl text-slate-800"></i>
+             <p className="text-slate-600 font-black uppercase text-xs tracking-[0.3em]">No hay registros en la MASTER_DATABASE_V4</p>
           </div>
         )}
       </div>
@@ -153,27 +166,28 @@ const DatabaseView: React.FC<Props> = ({ records, actors, onDeleteRecord, google
       <div className="bg-slate-900/50 p-4 border-t border-slate-800 flex justify-between items-center">
          <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Base de Datos Operativa • Boyacá 102</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Hub Master Conectado • Paipa v4.0.2</span>
          </div>
          <button onClick={() => setShowConfig(true)} className="text-[9px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2 hover:text-blue-300">
-           <i className="fa-solid fa-gears"></i> Parámetros de Red
+           <i className="fa-solid fa-network-wired"></i> Configuración de Respaldo
          </button>
       </div>
 
       {showConfig && (
         <div className="absolute inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl p-8 flex flex-col justify-center items-center text-center">
            <div className="max-w-xs w-full space-y-6">
-              <h3 className="text-white font-black uppercase text-sm italic tracking-widest">Enlace de Respaldo</h3>
+              <h3 className="text-white font-black uppercase text-sm italic tracking-widest">Puente Google Sheets</h3>
+              <p className="text-slate-500 text-[10px] font-bold">Respaldo adicional para auditoría fría.</p>
               <input 
                 type="text" 
                 value={tempUrl} 
                 onChange={e => setTempUrl(e.target.value)}
-                placeholder="Google App Script URL..."
+                placeholder="URL del Script..."
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-[10px] text-blue-400 font-mono outline-none"
               />
               <div className="flex gap-2">
-                <button onClick={() => setShowConfig(false)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase">Cancelar</button>
-                <button onClick={() => {onSetGoogleSheetUrl(tempUrl); setShowConfig(false);}} className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase">Guardar</button>
+                <button onClick={() => setShowConfig(false)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase">Cerrar</button>
+                <button onClick={() => {onSetGoogleSheetUrl(tempUrl); setShowConfig(false);}} className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase">Vincular</button>
               </div>
            </div>
         </div>
